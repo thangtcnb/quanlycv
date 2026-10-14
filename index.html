@@ -3,68 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Công Văn - Phân Hiệu UFM Quảng Ngãi</title>
+    <title>Quản Lý Công Văn - Phân Hiệu UFM Quảng Ngãi</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 min-h-screen flex flex-col justify-between">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
 
     <!-- Header Banner -->
     <header class="bg-blue-900 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold uppercase tracking-wider">TRƯỜNG ĐẠI HỌC TÀI CHÍNH - MARKETING</h1>
-                <p class="text-sm text-blue-200">PHÂN HIỆU TỈNH QUẢNG NGÃI – HỆ THỐNG QUẢN LÝ CÔNG VĂN</p>
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-blue-900 p-2.5 rounded-lg font-black text-xl shadow">UFM</div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold uppercase tracking-wide">Trường Đại học Tài chính - Marketing</h1>
+                    <p class="text-xs text-blue-200 uppercase tracking-wider">Phân hiệu tỉnh Quảng Ngãi – Hệ thống Quản lý Công văn</p>
+                </div>
             </div>
-            <div class="mt-3 sm:mt-0 text-sm bg-blue-800 px-3 py-1.5 rounded-lg border border-blue-700">
-                Trạng thái kết nối: <span id="firebase-status" class="font-semibold text-yellow-300">Đang kết nối Firebase...</span>
+            <div class="mt-3 md:mt-0 flex items-center space-x-4">
+                <span id="connection-status" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-400/30 px-3 py-1.5 rounded-full font-medium">
+                    <i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang kết nối Firebase...
+                </span>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-8 w-full flex-grow flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-sm p-8 border border-slate-200 text-center">
-            <h2 class="text-4xl font-bold text-slate-800">Chào anh</h2>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        
+        <!-- Thống kê nhanh -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Tổng số công văn</p>
+                    <h3 id="stat-total" class="text-2xl font-bold text-slate-700 mt-1">0</h3>
+                </div>
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đến</p>
+                    <h3 id="stat-incoming" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-arrow-down-long"></i>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đi</p>
+                    <h3 id="stat-outgoing" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+                </div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-arrow-up-long"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng điều khiển & Form thêm mới -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Cột trái: Form nhập công văn -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                <h2 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center">
+                    <i class="fa-solid fa-circle-plus text-blue-600 mr-2"></i> Thêm Công Văn Mới
+                </h2>
+                <form id="cv-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Loại công văn</label>
+                        <select id="cv-type" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                            <option value="Đến">Công văn đến</option>
+                            <option value="Đi">Công văn đi</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Số / Ký hiệu</label>
+                        <input type="text" id="cv-code" required placeholder="Ví dụ: 123/UFM-QN" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ngày tháng</label>
+                        <input type="date" id="cv-date" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Cơ quan ban hành / Nơi nhận</label>
+                        <input type="text" id="cv-org" required placeholder="Ví dụ: Trường Đại học Tài chính - Marketing" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Trích yếu nội dung</label>
+                        <textarea id="cv-summary" rows="3" required placeholder="Nội dung tóm tắt công văn..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Link minh chứng (Google Drive)</label>
+                        <input type="url" id="cv-link" placeholder="https://drive.google.com/..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 rounded-lg transition shadow-sm">
+                        <i class="fa-solid fa-floppy-disk mr-1"></i> Lưu công văn
+                    </button>
+                </form>
+            </div>
+
+            <!-- Cột phải: Danh sách công văn -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 pb-2 border-b border-slate-100 gap-3">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-list-ul text-blue-600 mr-2"></i> Danh Sách Công Văn
+                    </h2>
+                    <div class="w-full sm:w-auto">
+                        <input type="text" id="search-input" placeholder="Tìm kiếm số hiệu, nội dung..." class="w-full sm:w-64 text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Bảng dữ liệu -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold">
+                                <th class="p-3 rounded-l-lg">Loại / Số hiệu</th>
+                                <th class="p-3">Ngày</th>
+                                <th class="p-3">Cơ quan / Nơi nhận</th>
+                                <th class="p-3">Trích yếu</th>
+                                <th class="p-3 text-center">Minh chứng</th>
+                                <th class="p-3 text-center rounded-r-lg">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cv-table-body" class="divide-y divide-slate-100 text-sm">
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-slate-400">Đang tải dữ liệu công văn...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        Phân hiệu Trường Đại học Tài chính - Marketing tại tỉnh Quảng Ngãi &copy; 2026
-    </footer>
-
-    <!-- Firebase SDK Scripts -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // Cấu hình Firebase từ tài khoản của anh
+    <!-- Firebase Configuration & Script -->
+    <script>
+        // Cấu hình Firebase Realtime Database chính xác theo qlcvphqn
         const firebaseConfig = {
-            apiKey: "AIzaSyBYHI65OfrCJuHsT3xxU1iZEYemzq2MavM",
-            authDomain: "qlcvphqn.firebaseapp.com",
-            databaseURL: "https://qlcvphqn-default-rtdb.firebaseio.com",
-            projectId: "qlcvphqn",
-            storageBucket: "qlcvphqn.firebasestorage.app",
-            messagingSenderId: "582716059830",
-            appId: "1:582716059830:web:0de8e5b6f4507203d4f617",
-            measurementId: "G-2SZ3MHXRMP"
+            databaseURL: "https://qlcvphqn-default-rtdb.firebaseio.com"
         };
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            const db = getDatabase(app);
-            
-            // Kiểm tra kết nối nhanh tới Realtime Database
-            const connectedRef = ref(db, ".info/connected");
-            get(connectedRef).then(() => {
-                document.getElementById('firebase-status').innerText = "Đã kết nối thành công Firebase!";
-                document.getElementById('firebase-status').className = "font-semibold text-emerald-300";
+        // Khởi tạo Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Kiểm tra kết nối
+        const statusEl = document.getElementById('connection-status');
+        const connectedRef = db.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true) {
+                statusEl.className = "text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-3 py-1.5 rounded-full font-medium";
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Đã kết nối Firebase thành công';
+            } else {
+                statusEl.className = "text-xs bg-rose-500/20 text-rose-300 border border-rose-400/30 px-3 py-1.5 rounded-full font-medium";
+                statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Mất kết nối Firebase';
+            }
+        });
+
+        // Xử lý Thêm công văn
+        const form = document.getElementById('cv-form');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newCv = {
+                type: document.getElementById('cv-type').value,
+                code: document.getElementById('cv-code').value,
+                date: document.getElementById('cv-date').value,
+                org: document.getElementById('cv-org').value,
+                summary: document.getElementById('cv-summary').value,
+                link: document.getElementById('cv-link').value,
+                createdAt: Date.now()
+            };
+
+            db.ref('congvan').push(newCv)
+                .then(() => {
+                    form.reset();
+                    document.getElementById('cv-date').valueAsDate = new Date();
+                })
+                .catch((error) => {
+                    alert('Lỗi khi lưu: ' + error.message);
+                });
+        });
+
+        // Đặt mặc định ngày hôm nay cho form
+        document.getElementById('cv-date').valueAsDate = new Date();
+
+        // Lắng nghe dữ liệu Realtime từ Firebase
+        const tableBody = document.getElementById('cv-table-body');
+        const statTotal = document.getElementById('stat-total');
+        const statIncoming = document.getElementById('stat-incoming');
+        const statOutgoing = document.getElementById('stat-outgoing');
+        const searchInput = document.getElementById('search-input');
+
+        let allData = [];
+
+        db.ref('congvan').on('value', (snapshot) => {
+            allData = [];
+            snapshot.forEach((childSnapshot) => {
+                allData.push({
+                    id: childSnapshot.key,
+                    ...childSnapshot.val()
+                });
             });
-        } catch (error) {
-            document.getElementById('firebase-status').innerText = "Lỗi kết nối Firebase";
-            document.getElementById('firebase-status').className = "font-semibold text-red-300";
-            console.error(error);
+            allData.sort((a, b) => b.createdAt - a.createdAt);
+            renderTable(allData);
+        });
+
+        // Hàm render bảng dữ liệu
+        function renderTable(data) {
+            statTotal.innerText = data.length;
+            const incoming = data.filter(item => item.type === 'Đến').length;
+            const outgoing = data.filter(item => item.type === 'Đi').length;
+            statIncoming.innerText = incoming;
+            statOutgoing.innerText = outgoing;
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Chưa có dữ liệu công văn nào.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = data.map(item => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3">
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded ${item.type === 'Đến' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'} mb-1">
+                            ${item.type}
+                        </span>
+                        <div class="font-bold text-slate-700">${escapeHtml(item.code)}</div>
+                    </td>
+                    <td class="p-3 text-slate-600 whitespace-nowrap">${escapeHtml(item.date)}</td>
+                    <td class="p-3 text-slate-600 font-medium">${escapeHtml(item.org)}</td>
+                    <td class="p-3 text-slate-600 max-w-xs truncate" title="${escapeHtml(item.summary)}">${escapeHtml(item.summary)}</td>
+                    <td class="p-3 text-center">
+                        ${item.link ? `<a href="${escapeHtml(item.link)}" target="_blank" class="text-blue-600 hover:text-blue-800" title="Xem minh chứng"><i class="fa-solid fa-link"></i></a>` : `<span class="text-slate-300">-</span>`}
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteCv('${item.id}')" class="text-rose-500 hover:text-rose-700 p-1.5 rounded transition" title="Xóa">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Tìm kiếm
+        searchInput.addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filtered = allData.filter(item => 
+                item.code.toLowerCase().includes(keyword) || 
+                item.org.toLowerCase().includes(keyword) || 
+                item.summary.toLowerCase().includes(keyword)
+            );
+            renderTable(filtered);
+        });
+
+        // Xóa công văn
+        window.deleteCv = function(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa công văn này không?')) {
+                db.ref('congvan/' + id).remove();
+            }
+        };
+
+        // Chống XSS đơn giản
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
     </script>
 </body>
