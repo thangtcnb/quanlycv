@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Công Văn - Phân Hiệu UFM Quảng Ngãi</title>
+    <title>Hệ Thống Quản Lý Công Văn - Phân Hiệu UFM Quảng Ngãi</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Firebase SDK (Compat v9) -->
@@ -12,64 +12,38 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-100 min-h-screen font-sans text-slate-800">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
 
-    <!-- Màn Hình Đăng Nhập -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-12">
-        <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div class="bg-blue-900 p-8 text-center text-white relative">
-                <div class="w-20 h-20 bg-white text-blue-900 mx-auto rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg mb-3">
-                    UFM
-                </div>
-                <h1 class="text-xl font-bold uppercase tracking-wide">Trường ĐH Tài Chính - Marketing</h1>
-                <p class="text-xs text-blue-200 mt-1 uppercase tracking-wider">Phân hiệu tỉnh Quảng Ngãi</p>
-                <p class="text-sm font-medium text-amber-300 mt-2">HỆ THỐNG QUẢN LÝ CÔNG VĂN</p>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100">
+            <div class="text-center mb-6">
+                <div class="inline-block bg-blue-900 text-white font-black text-2xl px-4 py-2 rounded-xl shadow mb-3">UFM</div>
+                <h2 class="text-xl font-bold text-slate-800 uppercase">Quản Lý Công Văn</h2>
+                <p class="text-xs text-slate-500 mt-1">Phân hiệu tỉnh Quảng Ngãi</p>
             </div>
-
-            <form id="login-form" class="p-8 space-y-5">
-                <div id="login-error" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs p-3 rounded-lg flex items-center">
-                    <i class="fa-solid fa-circle-exclamation mr-2 text-sm"></i>
-                    <span id="login-error-msg">Tài khoản hoặc mật khẩu không chính xác!</span>
-                </div>
-
+            <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tên đăng nhập</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                            <i class="fa-solid fa-user"></i>
-                        </span>
-                        <input type="text" id="login-username" required placeholder="Nhập tên đăng nhập"
-                            class="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tài khoản</label>
+                    <input type="text" id="login-user" required placeholder="Nhập tên đăng nhập..." class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
-
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Mật khẩu</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                            <i class="fa-solid fa-lock"></i>
-                        </span>
-                        <input type="password" id="login-password" required placeholder="Nhập mật khẩu"
-                            class="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
+                    <input type="password" id="login-pass" required placeholder="Nhập mật khẩu..." class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
-
-                <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold text-sm py-3 rounded-lg transition shadow-md flex items-center justify-center">
-                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Đăng Nhập
+                <div id="login-error" class="text-xs text-rose-600 font-medium hidden">Tài khoản hoặc mật khẩu không chính xác!</div>
+                <button type="submit" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-medium text-sm py-3 rounded-lg transition shadow-md">
+                    Đăng Nhập Hệ Thống
                 </button>
-
-                <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-1">
-                    <p class="font-semibold text-slate-600">Thử nghiệm tài khoản hệ thống:</p>
-                    <p>• Lãnh đạo: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-blue-700 font-mono">lanhdao</code> / <code class="bg-slate-100 px-1.5 py-0.5 rounded text-blue-700 font-mono">lanhdao123</code> (Xem & Thống kê)</p>
-                    <p>• Văn thư: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-blue-700 font-mono">vanthu</code> / <code class="bg-slate-100 px-1.5 py-0.5 rounded text-blue-700 font-mono">vanthu</code> (Toàn quyền)</p>
-                </div>
             </form>
+            <div class="mt-6 text-center text-xs text-slate-400 border-t border-slate-100 pt-4">
+                Tài khoản test: <span class="font-semibold text-slate-600">vanthu</span> / <span class="font-semibold text-slate-600">vanthu</span> hoặc <span class="font-semibold text-slate-600">lanhdao</span> / <span class="font-semibold text-slate-600">lanhdao123</span>
+            </div>
         </div>
     </div>
 
-    <!-- Màn Hình Ứng Dụng Chính -->
-    <div id="app-screen" class="hidden min-h-screen flex flex-col">
-
+    <!-- MAIN APP WRAPPER -->
+    <div id="app-wrapper" class="hidden min-h-screen flex flex-col">
         <!-- Header Banner -->
         <header class="bg-blue-900 text-white shadow-md">
             <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
@@ -81,708 +55,524 @@
                     </div>
                 </div>
                 <div class="mt-3 md:mt-0 flex items-center space-x-4">
-                    <div class="flex items-center bg-blue-950/60 border border-blue-700/50 px-3 py-1.5 rounded-lg text-xs">
-                        <i class="fa-solid fa-circle-user text-amber-400 text-base mr-2"></i>
-                        <div>
-                            <p id="user-display-name" class="font-bold text-white">Lãnh đạo</p>
-                            <p id="user-display-role" class="text-[10px] text-blue-300">Quyền: Xem & Thống kê</p>
-                        </div>
+                    <div class="flex bg-blue-950 p-1 rounded-lg border border-blue-800">
+                        <button onclick="switchTab('main')" id="tab-btn-main" class="px-4 py-1.5 text-xs font-semibold rounded-md bg-blue-700 text-white transition shadow-sm">
+                            <i class="fa-solid fa-folder-open mr-1"></i> Quản Lý Công Văn
+                        </button>
+                        <button onclick="switchTab('stats')" id="tab-btn-stats" class="px-4 py-1.5 text-xs font-semibold rounded-md text-blue-200 hover:text-white transition">
+                            <i class="fa-solid fa-chart-pie mr-1"></i> Thống Kê & Báo Cáo
+                        </button>
                     </div>
-                    <button id="btn-logout" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center shadow">
-                        <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Đăng xuất
-                    </button>
+                    <div class="flex items-center space-x-2 pl-2 border-l border-blue-800">
+                        <span id="user-welcome" class="text-xs font-medium text-blue-100"></span>
+                        <button onclick="logout()" class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg transition" title="Đăng xuất">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs Bar -->
-        <div class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
-            <div class="max-w-7xl mx-auto px-4 flex space-x-2">
-                <button id="tab-btn-list" onclick="switchTab('list')" class="py-3 px-5 text-sm font-bold flex items-center space-x-2 border-b-2 border-blue-600 text-blue-700 bg-blue-50/50 transition">
-                    <i class="fa-solid fa-list-ul"></i>
-                    <span>Danh Sách Công Văn</span>
-                </button>
-                <button id="tab-btn-stats" onclick="switchTab('stats')" class="py-3 px-5 text-sm font-semibold flex items-center space-x-2 border-b-2 border-transparent text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition">
-                    <i class="fa-solid fa-chart-pie"></i>
-                    <span>Thống Kê & Báo Cáo</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-            
-            <!-- TAB 1: DANH SÁCH CÔNG VĂN -->
-            <div id="tab-list" class="space-y-6">
-                <!-- Thống kê nhanh -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase">Tổng số công văn</p>
-                            <h3 id="stat-total" class="text-2xl font-bold text-slate-700 mt-1">0</h3>
-                        </div>
-                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xl">
-                            <i class="fa-solid fa-folder-open"></i>
-                        </div>
+        <!-- TAB 1: QUẢN LÝ CÔNG VĂN -->
+        <div id="tab-main" class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+            <!-- Thống kê nhanh -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Tổng số công văn</p>
+                        <h3 id="stat-total" class="text-2xl font-bold text-slate-700 mt-1">0</h3>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đến</p>
-                            <h3 id="stat-incoming" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
-                        </div>
-                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xl">
-                            <i class="fa-solid fa-arrow-down-long"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đi</p>
-                            <h3 id="stat-outgoing" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
-                        </div>
-                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl">
-                            <i class="fa-solid fa-arrow-up-long"></i>
-                        </div>
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-folder-open"></i>
                     </div>
                 </div>
-
-                <!-- Content Grid: Form (vanthu) + Table -->
-                <div id="list-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                    <!-- Cột trái: Form nhập công văn (chỉ dành cho vanthu) -->
-                    <div id="form-container" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-                        <h2 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center">
-                            <i class="fa-solid fa-circle-plus text-blue-600 mr-2"></i> Thêm Công Văn Mới
-                        </h2>
-                        <form id="cv-form" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Loại công văn</label>
-                                <select id="cv-type" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
-                                    <option value="Đến">Công văn đến</option>
-                                    <option value="Đi">Công văn đi</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Số / Ký hiệu</label>
-                                <input type="text" id="cv-code" required placeholder="Ví dụ: 123/UFM-QN" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ngày tháng</label>
-                                <input type="date" id="cv-date" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
-                            <div>
-                                <label id="cv-org-label" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Cơ quan ban hành</label>
-                                <div id="cv-org-wrapper">
-                                    <input type="text" id="cv-org" required placeholder="Ví dụ: Ủy ban nhân dân tỉnh Quảng Ngãi" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Trích yếu nội dung</label>
-                                <textarea id="cv-summary" rows="3" required placeholder="Nội dung tóm tắt công văn..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Link minh chứng (Google Drive)</label>
-                                <input type="url" id="cv-link" placeholder="https://drive.google.com/..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 rounded-lg transition shadow-sm flex items-center justify-center">
-                                <i class="fa-solid fa-floppy-disk mr-1.5"></i> Lưu công văn
-                            </button>
-                        </form>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đến</p>
+                        <h3 id="stat-incoming" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
                     </div>
-
-                    <!-- Cột phải: Danh sách công văn -->
-                    <div id="table-container" class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 pb-2 border-b border-slate-100 gap-3">
-                            <h2 class="text-base font-bold text-slate-800 flex items-center">
-                                <i class="fa-solid fa-list-ul text-blue-600 mr-2"></i> Danh Sách Công Văn
-                            </h2>
-                            <div class="w-full sm:w-auto relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                                </span>
-                                <input type="text" id="search-input" placeholder="Tìm kiếm số hiệu, cơ quan, nội dung..." class="w-full sm:w-72 text-sm border border-slate-300 rounded-lg pl-8 pr-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </div>
-                        </div>
-
-                        <!-- Bảng dữ liệu -->
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold">
-                                        <th class="p-3 rounded-l-lg">Loại / Số hiệu</th>
-                                        <th class="p-3">Ngày</th>
-                                        <th class="p-3">Cơ quan / Nơi nhận</th>
-                                        <th class="p-3">Trích yếu</th>
-                                        <th class="p-3 text-center">Minh chứng</th>
-                                        <th id="th-action" class="p-3 text-center rounded-r-lg">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cv-table-body" class="divide-y divide-slate-100 text-sm">
-                                    <tr>
-                                        <td colspan="6" class="text-center py-8 text-slate-400">
-                                            <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-blue-600"></i>
-                                            <p>Đang tải dữ liệu công văn...</p>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Phân trang -->
-                        <div class="flex flex-col sm:flex-row items-center justify-between mt-4 pt-3 border-t border-slate-100 gap-3 text-xs text-slate-500">
-                            <div id="pagination-info" class="font-medium">
-                                Hiển thị 0 - 0 trong tổng số 0 công văn
-                            </div>
-                            <div class="flex items-center space-x-1" id="pagination-controls">
-                                <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">
-                                    <i class="fa-solid fa-chevron-left mr-1"></i> Trước
-                                </button>
-                                <span id="page-indicator" class="px-3 py-1.5 font-semibold text-slate-700 bg-slate-100 rounded-lg">
-                                    1 / 1
-                                </span>
-                                <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium">
-                                    Sau <i class="fa-solid fa-chevron-right ml-1"></i>
-                                </button>
-                            </div>
-                        </div>
-
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-arrow-down-long"></i>
                     </div>
-
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đi</p>
+                        <h3 id="stat-outgoing" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-arrow-up-long"></i>
+                    </div>
                 </div>
             </div>
 
-            <!-- TAB 2: THỐNG KÊ & BÁO CÁO -->
-            <div id="tab-stats" class="hidden space-y-6">
-                <!-- Bộ Lọc Thống Kê -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <!-- Bảng điều khiển & Form thêm mới -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Cột trái: Form nhập công văn (Chỉ vanthu mới thấy) -->
+                <div id="form-container" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
                     <h2 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center">
-                        <i class="fa-solid fa-filter text-blue-600 mr-2"></i> Tiêu Chí Thống Kê & Báo Cáo
+                        <i class="fa-solid fa-circle-plus text-blue-600 mr-2"></i> Thêm Công Văn Mới
                     </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <form id="cv-form" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Từ ngày</label>
-                            <input type="date" id="stat-from-date" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Đến ngày</label>
-                            <input type="date" id="stat-to-date" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Loại công văn / Phòng ban</label>
-                            <select id="stat-category" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
-                                <option value="all">-- Tất cả loại & phòng ban --</option>
-                                <option value="incoming">Công văn đến</option>
-                                <option value="outgoing_hctv">Công văn đi - Phòng Hành chính - Tài vụ</option>
-                                <option value="outgoing_dtkh">Công văn đi - Phòng Đào tạo - KH và QLSV</option>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Loại công văn</label>
+                            <select id="cv-type" onchange="handleTypeChange()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                                <option value="Đến">Công văn đến</option>
+                                <option value="Đi">Công văn đi</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="mt-4 flex justify-end space-x-2">
-                        <button onclick="resetStatsFilter()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center">
-                            <i class="fa-solid fa-rotate-right mr-1.5"></i> Đặt lại
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Số / Ký hiệu</label>
+                            <input type="text" id="cv-code" required placeholder="Ví dụ: 123/UFM-QN" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Ngày tháng</label>
+                            <input type="date" id="cv-date" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label id="org-label" class="block text-xs font-semibold text-slate-600 uppercase mb-1">Cơ quan ban hành</label>
+                            <div id="org-input-wrapper">
+                                <input type="text" id="cv-org" required placeholder="Tên cơ quan ban hành..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Trích yếu nội dung</label>
+                            <textarea id="cv-summary" rows="3" required placeholder="Nội dung tóm tắt công văn..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Link minh chứng (Google Drive)</label>
+                            <input type="url" id="cv-link" placeholder="https://drive.google.com/..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 rounded-lg transition shadow-sm">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Lưu công văn
                         </button>
-                        <button onclick="applyStatsFilter()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition flex items-center shadow-sm">
-                            <i class="fa-solid fa-magnifying-glass mr-1.5"></i> Xem thống kê
-                        </button>
-                    </div>
+                    </form>
                 </div>
 
-                <!-- Metrics Cards -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-600">
-                        <p class="text-xs font-semibold text-slate-500 uppercase">Tổng số kết quả</p>
-                        <h4 id="stat-card-total" class="text-2xl font-bold text-blue-700 mt-1">0</h4>
-                        <p class="text-[11px] text-slate-400 mt-1">Công văn thỏa điều kiện</p>
+                <!-- Cột phải: Danh sách công văn (Responsive width dựa vào quyền) -->
+                <div id="table-container" class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 pb-2 border-b border-slate-100 gap-3">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-list-ul text-blue-600 mr-2"></i> Danh Sách Công Văn
+                        </h2>
+                        <div class="w-full sm:w-auto">
+                            <input type="text" id="search-input" placeholder="Tìm kiếm số hiệu, nội dung..." class="w-full sm:w-64 text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
                     </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
-                        <p class="text-xs font-semibold text-slate-500 uppercase">Công văn đến</p>
-                        <h4 id="stat-card-incoming" class="text-2xl font-bold text-emerald-600 mt-1">0</h4>
-                        <p class="text-[11px] text-slate-400 mt-1">Công văn từ bên ngoài</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500">
-                        <p class="text-xs font-semibold text-slate-500 uppercase">CV Đi - HC-TV</p>
-                        <h4 id="stat-card-hctv" class="text-2xl font-bold text-indigo-600 mt-1">0</h4>
-                        <p class="text-[11px] text-slate-400 mt-1">Phòng Hành chính - Tài vụ</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-purple-500">
-                        <p class="text-xs font-semibold text-slate-500 uppercase">CV Đi - ĐT-KH&QLSV</p>
-                        <h4 id="stat-card-dtkh" class="text-2xl font-bold text-purple-600 mt-1">0</h4>
-                        <p class="text-[11px] text-slate-400 mt-1">Phòng Đào tạo - KH và QLSV</p>
-                    </div>
-                </div>
 
-                <!-- Chi tiết bảng kết quả lọc -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="text-sm font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
-                        <span><i class="fa-solid fa-table-list text-blue-600 mr-2"></i> Báo Cáo Chi Tiết Kết Quả Lọc</span>
-                        <span id="stats-count-badge" class="text-xs font-normal bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full">0 công văn</span>
-                    </h3>
+                    <!-- Bảng dữ liệu -->
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold">
-                                    <th class="p-3 rounded-l-lg">STT</th>
-                                    <th class="p-3">Loại / Số hiệu</th>
+                                    <th class="p-3 rounded-l-lg">Loại / Số hiệu</th>
                                     <th class="p-3">Ngày</th>
                                     <th class="p-3">Cơ quan / Nơi nhận</th>
                                     <th class="p-3">Trích yếu</th>
-                                    <th class="p-3 text-center rounded-r-lg">Minh chứng</th>
+                                    <th class="p-3 text-center">Minh chứng</th>
+                                    <th id="th-action" class="p-3 text-center rounded-r-lg">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody id="stat-table-body" class="divide-y divide-slate-100 text-sm">
-                                <tr>
-                                    <td colspan="6" class="text-center py-8 text-slate-400">Vui lòng chọn tiêu chí và nhấn "Xem thống kê"</td>
-                                </tr>
+                            <tbody id="cv-table-body" class="divide-y divide-slate-100 text-sm">
+                                <tr><td colspan="6" class="text-center py-8 text-slate-400">Đang tải dữ liệu công văn...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Phân trang -->
+                    <div class="flex justify-between items-center mt-4 pt-3 border-t border-slate-100 text-sm">
+                        <span id="pagination-info" class="text-slate-500 text-xs">Hiển thị 0 - 0 của 0 công văn</span>
+                        <div class="flex space-x-2">
+                            <button id="prev-btn" onclick="changePage(-1)" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium transition disabled:opacity-50">Trước</button>
+                            <span id="page-indicator" class="px-3 py-1 text-xs font-bold text-slate-700 flex items-center">Trang 1 / 1</span>
+                            <button id="next-btn" onclick="changePage(1)" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium transition disabled:opacity-50">Sau</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: THỐNG KÊ & BÁO CÁO -->
+        <div id="tab-stats" class="hidden flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+                <h2 class="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center">
+                    <i class="fa-solid fa-filter text-blue-600 mr-2"></i> Tiêu Chí Thống Kê & Báo Cáo
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Thời gian (Từ ngày)</label>
+                        <input type="date" id="stat-from-date" onchange="runStatistics()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Thời gian (Đến ngày)</label>
+                        <input type="date" id="stat-to-date" onchange="runStatistics()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Lọc theo Loại / Phòng ban</label>
+                        <select id="stat-filter-type" onchange="runStatistics()" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                            <option value="ALL">Tất cả loại công văn</option>
+                            <option value="Đến">Công văn đến</option>
+                            <option value="Đi - Phòng Hành chính - Tài vụ">Công văn đi - Phòng Hành chính - Tài vụ</option>
+                            <option value="Đi - Phòng Đào tạo - KH và QLSV">Công văn đi - Phòng Đào tạo - KH và QLSV</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
-        </main>
+            <!-- Kết quả thống kê -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Tổng số kết quả lọc</p>
+                    <h3 id="res-total" class="text-2xl font-bold text-blue-900 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đến trong khoảng lọc</p>
+                    <h3 id="res-incoming" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Công văn đi trong khoảng lọc</p>
+                    <h3 id="res-outgoing" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider">Chi tiết danh sách thống kê</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold">
+                                <th class="p-3 rounded-l-lg">Loại / Số hiệu</th>
+                                <th class="p-3">Ngày tạo</th>
+                                <th class="p-3">Cơ quan / Nơi nhận</th>
+                                <th class="p-3 rounded-r-lg">Trích yếu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-table-body" class="divide-y divide-slate-100 text-sm">
+                            <tr><td colspan="4" class="text-center py-6 text-slate-400">Chưa có dữ liệu thống kê.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
+    <!-- Firebase Configuration & Script -->
     <script>
-        // --- 1. Cấu hình & Khởi tạo Firebase Realtime Database ---
         const firebaseConfig = {
             databaseURL: "https://qlcvphqn-default-rtdb.firebaseio.com"
         };
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 2. Quản lý Tài khoản & Phân quyền (Authentication) ---
-        const USERS = {
-            'lanhdao': { password: 'lanhdao123', name: 'Lãnh đạo', role: 'lanhdao' },
-            'vanthu': { password: 'vanthu', name: 'Văn thư', role: 'vanthu' }
-        };
-
+        // Biến toàn cục quản lý trạng thái
         let currentUser = null;
-
-        // Kiểm tra session localStorage
-        function checkAuthSession() {
-            const stored = localStorage.getItem('qlcv_user');
-            if (stored) {
-                try {
-                    currentUser = JSON.parse(stored);
-                    showAppScreen();
-                    return;
-                } catch(e) {
-                    localStorage.removeItem('qlcv_user');
-                }
-            }
-            showLoginScreen();
-        }
-
-        function showLoginScreen() {
-            document.getElementById('login-screen').classList.remove('hidden');
-            document.getElementById('app-screen').classList.add('hidden');
-        }
-
-        function showAppScreen() {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('hidden');
-
-            document.getElementById('user-display-name').innerText = currentUser.name;
-            document.getElementById('user-display-role').innerText = currentUser.role === 'vanthu'
-                ? 'Quyền: Toàn quyền hệ thống'
-                : 'Quyền: Xem & Thống kê';
-
-            applyRolePermissions();
-        }
-
-        function applyRolePermissions() {
-            const formContainer = document.getElementById('form-container');
-            const tableContainer = document.getElementById('table-container');
-            const thAction = document.getElementById('th-action');
-
-            if (currentUser.role === 'vanthu') {
-                formContainer.classList.remove('hidden');
-                tableContainer.className = "lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200";
-                if (thAction) thAction.classList.remove('hidden');
-            } else {
-                formContainer.classList.add('hidden');
-                tableContainer.className = "lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200";
-                if (thAction) thAction.classList.add('hidden');
-            }
-            renderTable();
-        }
+        let allData = [];
+        let currentPage = 1;
+        const pageSize = 20;
 
         // Xử lý Đăng nhập
-        document.getElementById('login-form').addEventListener('submit', (e) => {
+        const loginScreen = document.getElementById('login-screen');
+        const appWrapper = document.getElementById('app-wrapper');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const userWelcome = document.getElementById('user-welcome');
+
+        loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const username = document.getElementById('login-username').value.trim();
-            const password = document.getElementById('login-password').value.trim();
-            const errorEl = document.getElementById('login-error');
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value.trim();
 
-            if (USERS[username] && USERS[username].password === password) {
-                errorEl.classList.add('hidden');
-                currentUser = {
-                    username: username,
-                    name: USERS[username].name,
-                    role: USERS[username].role
-                };
-                localStorage.setItem('qlcv_user', JSON.stringify(currentUser));
-                showAppScreen();
+            if ((u === 'lanhdao' && p === 'lanhdao123') || (u === 'vanthu' && p === 'vanthu')) {
+                currentUser = u;
+                localStorage.setItem('qlcv_user', u);
+                initApp();
             } else {
-                errorEl.classList.remove('hidden');
+                loginError.classList.remove('hidden');
             }
         });
 
-        // Xử lý Đăng xuất
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-                localStorage.removeItem('qlcv_user');
-                currentUser = null;
-                showLoginScreen();
+        function logout() {
+            localStorage.removeItem('qlcv_user');
+            currentUser = null;
+            appWrapper.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            loginForm.reset();
+            loginError.classList.add('hidden');
+        }
+
+        // Tự động khôi phục phiên đăng nhập
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem('qlcv_user');
+            if (savedUser) {
+                currentUser = savedUser;
+                initApp();
             }
         });
 
-        // --- 3. Form Nhập liệu Thông minh (Rẽ nhánh theo loại) ---
-        const cvTypeSelect = document.getElementById('cv-type');
-        const cvOrgWrapper = document.getElementById('cv-org-wrapper');
-        const cvOrgLabel = document.getElementById('cv-org-label');
+        function initApp() {
+            loginScreen.classList.add('hidden');
+            appWrapper.classList.remove('hidden');
 
-        function updateOrgField() {
-            const type = cvTypeSelect.value;
-            if (type === 'Đến') {
-                cvOrgLabel.innerText = 'Cơ quan ban hành';
-                cvOrgWrapper.innerHTML = `
-                    <input type="text" id="cv-org" required placeholder="Ví dụ: Ủy ban nhân dân tỉnh Quảng Ngãi" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                `;
+            if (currentUser === 'vanthu') {
+                userWelcome.innerHTML = '<i class="fa-solid fa-user-shield mr-1"></i> Xin chào: <b>Văn thư</b>';
+                document.getElementById('form-container').classList.remove('hidden');
+                document.getElementById('table-container').className = "lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200";
+                document.getElementById('th-action').classList.remove('hidden');
             } else {
-                cvOrgLabel.innerText = 'Nơi nhận (Phòng ban)';
-                cvOrgWrapper.innerHTML = `
-                    <select id="cv-org" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium">
+                userWelcome.innerHTML = '<i class="fa-solid fa-user-tie mr-1"></i> Xin chào: <b>Lãnh đạo</b>';
+                document.getElementById('form-container').classList.add('hidden');
+                document.getElementById('table-container').className = "lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200";
+                document.getElementById('th-action').classList.add('hidden');
+            }
+
+            document.getElementById('cv-date').valueAsDate = new Date();
+            loadFirebaseData();
+        }
+
+        // Chuyển Tab
+        function switchTab(tabName) {
+            const btnMain = document.getElementById('tab-btn-main');
+            const btnStats = document.getElementById('tab-btn-stats');
+            const tabMain = document.getElementById('tab-main');
+            const tabStats = document.getElementById('tab-stats');
+
+            if (tabName === 'main') {
+                btnMain.className = "px-4 py-1.5 text-xs font-semibold rounded-md bg-blue-700 text-white transition shadow-sm";
+                btnStats.className = "px-4 py-1.5 text-xs font-semibold rounded-md text-blue-200 hover:text-white transition";
+                tabMain.classList.remove('hidden');
+                tabStats.classList.add('hidden');
+            } else {
+                btnStats.className = "px-4 py-1.5 text-xs font-semibold rounded-md bg-blue-700 text-white transition shadow-sm";
+                btnMain.className = "px-4 py-1.5 text-xs font-semibold rounded-md text-blue-200 hover:text-white transition";
+                tabStats.classList.remove('hidden');
+                tabMain.classList.add('hidden');
+                runStatistics();
+            }
+        }
+
+        // Xử lý thay đổi Loại công văn (Đến / Đi)
+        function handleTypeChange() {
+            const type = document.getElementById('cv-type').value;
+            const orgLabel = document.getElementById('org-label');
+            const orgWrapper = document.getElementById('org-input-wrapper');
+
+            if (type === 'Đi') {
+                orgLabel.innerText = "Nơi nhận (Phòng ban)";
+                orgWrapper.innerHTML = `
+                    <select id="cv-org" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
                         <option value="Phòng Hành chính - Tài vụ">Phòng Hành chính - Tài vụ</option>
                         <option value="Phòng Đào tạo - KH và QLSV">Phòng Đào tạo - KH và QLSV</option>
                     </select>
                 `;
+            } else {
+                orgLabel.innerText = "Cơ quan ban hành";
+                orgWrapper.innerHTML = `
+                    <input type="text" id="cv-org" required placeholder="Tên cơ quan ban hành..." class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                `;
             }
         }
 
-        cvTypeSelect.addEventListener('change', updateOrgField);
-
-        // Mặc định khởi tạo ngày hôm nay
-        document.getElementById('cv-date').valueAsDate = new Date();
-
-        // Xử lý thêm công văn mới
-        document.getElementById('cv-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (currentUser.role !== 'vanthu') {
-                alert('Bạn không có quyền thực hiện chức năng này!');
-                return;
-            }
-
-            const cvOrgEl = document.getElementById('cv-org');
-            const newCv = {
-                type: cvTypeSelect.value,
-                code: document.getElementById('cv-code').value.trim(),
-                date: document.getElementById('cv-date').value,
-                org: cvOrgEl ? cvOrgEl.value.trim() : '',
-                summary: document.getElementById('cv-summary').value.trim(),
-                link: document.getElementById('cv-link').value.trim(),
-                createdAt: Date.now()
-            };
-
-            db.ref('congvan').push(newCv)
-                .then(() => {
-                    document.getElementById('cv-form').reset();
-                    document.getElementById('cv-date').valueAsDate = new Date();
-                    updateOrgField();
-                    alert('Lưu công văn thành công!');
-                })
-                .catch((error) => {
-                    alert('Lỗi khi lưu công văn: ' + error.message);
+        // Tải dữ liệu từ Firebase và tự tạo 50 công văn mẫu nếu dữ liệu trống
+        function loadFirebaseData() {
+            db.ref('congvan').on('value', (snapshot) => {
+                allData = [];
+                snapshot.forEach((child) => {
+                    allData.push({ id: child.key, ...child.val() });
                 });
-        });
 
-        // --- 4. Quản lý Dữ liệu Realtime & Mock Data 50 công văn ---
-        let allData = [];
-        let filteredData = [];
-        let currentPage = 1;
-        const PAGE_SIZE = 20;
+                // Nếu chưa có dữ liệu nào, tự động tạo 50 công văn mẫu để test
+                if (allData.length === 0) {
+                    generateSampleData();
+                    return;
+                }
 
-        db.ref('congvan').on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (!val || Object.keys(val).length === 0) {
-                // Khởi tạo 50 dữ liệu mẫu nếu DB trống
-                seedMockData();
-                return;
-            }
-
-            allData = [];
-            snapshot.forEach((childSnapshot) => {
-                allData.push({
-                    id: childSnapshot.key,
-                    ...childSnapshot.val()
-                });
+                allData.sort((a, b) => b.createdAt - a.createdAt);
+                renderTable();
             });
+        }
 
-            // Sắp xếp giảm dần theo thời gian tạo
-            allData.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            applySearchAndRender();
-            applyStatsFilter(); // Cập nhật cả tab thống kê
-        });
-
-        // Tạo 50 công văn mẫu (25 Đến, 25 Đi)
-        function seedMockData() {
-            const orgsIncoming = [
-                'Bộ Giáo dục và Đào tạo',
-                'Ủy ban nhân dân tỉnh Quảng Ngãi',
-                'Sở Giáo dục và Đào tạo Quảng Ngãi',
-                'Sở Tài chính tỉnh Quảng Ngãi',
-                'Sở Thông tin và Truyền thông',
-                'Trường Đại học Tài chính - Marketing',
-                'Bảo hiểm xã hội tỉnh Quảng Ngãi',
-                'Cục Thuế tỉnh Quảng Ngãi'
-            ];
-
-            const orgsOutgoing = [
-                'Phòng Hành chính - Tài vụ',
-                'Phòng Đào tạo - KH và QLSV'
-            ];
-
-            const sampleSummaries = [
-                'V/v báo cáo công tác quản lý tài chính quý I/2025',
-                'V/v kế hoạch tuyển sinh đại học chính quy năm 2025',
-                'V/v phân công nhiệm vụ cán bộ giảng viên năm học mới',
-                'V/v tổ chức hội nghị công chức viên chức và người lao động',
-                'V/v triển khai công tác bảo đảm an ninh trật tự trường học',
-                'V/v tập huấn ứng dụng công nghệ thông tin trong giảng dạy',
-                'V/v phối hợp tổ chức chương trình tư vấn hướng nghiệp',
-                'V/v phê duyệt dự toán kinh phí sửa chữa cơ sở vật chất',
-                'V/v thanh tra kiểm tra công tác đào tạo và quản lý sinh viên',
-                'V/v khen thưởng học sinh sinh viên có thành tích xuất sắc'
+        function generateSampleData() {
+            const orgsIncoming = ["Bộ Giáo dục và Đào tạo", "UBND Tỉnh Quảng Ngãi", "Trường Đại học Kinh tế TP.HCM", "Sở Nội vụ tỉnh Quảng Ngãi", "Ngân hàng VietinBank"];
+            const orgsOutgoing = ["Phòng Hành chính - Tài vụ", "Phòng Đào tạo - KH và QLSV"];
+            const summaries = [
+                "Về việc triển khai kế hoạch năm học mới 2026-2027",
+                "Báo cáo sơ kết công tác 6 tháng đầu năm",
+                "Quyết định về việc phân công nhiệm vụ viên chức",
+                "Thông báo lịch nghỉ lễ và trực cơ quan",
+                "Kế hoạch tổ chức hội thảo khoa học cấp phân hiệu",
+                "Phúc đáp công văn về việc phối hợp công tác tuyển sinh"
             ];
 
             const updates = {};
-            const baseTimestamp = Date.now() - (50 * 86400000); // 50 ngày trước
-
             for (let i = 1; i <= 50; i++) {
-                const isIncoming = i % 2 !== 0; // 25 đến, 25 đi
-                const type = isIncoming ? 'Đến' : 'Đi';
-                const code = isIncoming ? `${100 + i}/BGDĐT-QN` : `${200 + i}/UFM-QN`;
+                const isIncoming = i % 2 === 0;
+                const type = isIncoming ? "Đến" : "Đi";
+                const org = isIncoming ? orgsIncoming[i % orgsIncoming.length] : orgsOutgoing[i % orgsOutgoing.length];
+                const codeNumber = (100 + i) + "/UFM-QN";
+                const randomDaysAgo = Math.floor(Math.random() * 60);
+                const d = new Date();
+                d.setDate(d.getDate() - randomDaysAgo);
+                const dateStr = d.toISOString().split('T')[0];
 
-                // Ngày rải rác
-                const itemDate = new Date(baseTimestamp + i * 86400000).toISOString().split('T')[0];
-                const org = isIncoming
-                    ? orgsIncoming[i % orgsIncoming.length]
-                    : orgsOutgoing[i % orgsOutgoing.length];
-                const summary = `${sampleSummaries[i % sampleSummaries.length]} (Mẫu ${i})`;
-                const link = `https://drive.google.com/file/d/sample_file_${i}`;
-
-                const newKey = db.ref('congvan').push().key;
-                updates['/congvan/' + newKey] = {
+                const newRef = db.ref('congvan').push();
+                updates[newRef.key] = {
                     type: type,
-                    code: code,
-                    date: itemDate,
+                    code: codeNumber,
+                    date: dateStr,
                     org: org,
-                    summary: summary,
-                    link: link,
-                    createdAt: baseTimestamp + i * 86400000
+                    summary: summaries[i % summaries.length] + ` (Mẫu số ${i})`,
+                    link: "https://drive.google.com",
+                    createdAt: d.getTime()
                 };
             }
-
-            db.ref().update(updates);
+            db.ref('congvan').update(updates);
         }
 
-        // --- 5. Phân Trang & Tìm Kiếm Danh Sách ---
-        const searchInput = document.getElementById('search-input');
-        searchInput.addEventListener('input', () => {
-            currentPage = 1;
-            applySearchAndRender();
+        // Xử lý Thêm mới công văn
+        const form = document.getElementById('cv-form');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (currentUser !== 'vanthu') return;
+
+            const type = document.getElementById('cv-type').value;
+            const newCv = {
+                type: type,
+                code: document.getElementById('cv-code').value,
+                date: document.getElementById('cv-date').value,
+                org: document.getElementById('cv-org').value,
+                summary: document.getElementById('cv-summary').value,
+                link: document.getElementById('cv-link').value,
+                createdAt: Date.now()
+            };
+
+            db.ref('congvan').push(newCv).then(() => {
+                form.reset();
+                document.getElementById('cv-date').valueAsDate = new Date();
+                handleTypeChange();
+            }).catch(err => alert('Lỗi: ' + err.message));
         });
 
-        function applySearchAndRender() {
-            const keyword = searchInput.value.trim().toLowerCase();
-            if (!keyword) {
-                filteredData = [...allData];
-            } else {
-                filteredData = allData.filter(item =>
-                    (item.code && item.code.toLowerCase().includes(keyword)) ||
-                    (item.org && item.org.toLowerCase().includes(keyword)) ||
-                    (item.summary && item.summary.toLowerCase().includes(keyword))
-                );
+        // Xóa công văn
+        window.deleteCv = function(id) {
+            if (currentUser !== 'vanthu') return;
+            if (confirm('Bạn có chắc chắn muốn xóa công văn này không?')) {
+                db.ref('congvan/' + id).remove();
             }
-            renderTable();
-        }
+        };
+
+        // Render bảng danh sách có phân trang (20 items/page)
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
 
         function renderTable() {
+            const keyword = searchInput.value.toLowerCase();
+            const filtered = allData.filter(item => 
+                item.code.toLowerCase().includes(keyword) || 
+                item.org.toLowerCase().includes(keyword) || 
+                item.summary.toLowerCase().includes(keyword)
+            );
+
             // Cập nhật thống kê nhanh
             document.getElementById('stat-total').innerText = allData.length;
             document.getElementById('stat-incoming').innerText = allData.filter(i => i.type === 'Đến').length;
             document.getElementById('stat-outgoing').innerText = allData.filter(i => i.type === 'Đi').length;
 
-            const tableBody = document.getElementById('cv-table-body');
-            const totalItems = filteredData.length;
+            const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
 
-            if (totalItems === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Không tìm thấy công văn nào phù hợp.</td></tr>`;
-                document.getElementById('pagination-info').innerText = 'Hiển thị 0 - 0 trong tổng số 0 công văn';
-                document.getElementById('page-indicator').innerText = '1 / 1';
-                document.getElementById('btn-prev-page').disabled = true;
-                document.getElementById('btn-next-page').disabled = true;
-                return;
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageItems = filtered.slice(startIdx, startIdx + pageSize);
+
+            const tableBody = document.getElementById('cv-table-body');
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Không tìm thấy công văn phù hợp.</td></tr>`;
+            } else {
+                tableBody.innerHTML = pageItems.map(item => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3">
+                            <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded ${item.type === 'Đến' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'} mb-1">
+                                ${item.type}
+                            </span>
+                            <div class="font-bold text-slate-700">${escapeHtml(item.code)}</div>
+                        </td>
+                        <td class="p-3 text-slate-600 whitespace-nowrap">${escapeHtml(item.date)}</td>
+                        <td class="p-3 text-slate-600 font-medium">${escapeHtml(item.org)}</td>
+                        <td class="p-3 text-slate-600 max-w-xs truncate" title="${escapeHtml(item.summary)}">${escapeHtml(item.summary)}</td>
+                        <td class="p-3 text-center">
+                            ${item.link ? `<a href="${escapeHtml(item.link)}" target="_blank" class="text-blue-600 hover:text-blue-800" title="Xem minh chứng"><i class="fa-solid fa-link"></i></a>` : `<span class="text-slate-300">-</span>`}
+                        </td>
+                        ${currentUser === 'vanthu' ? `
+                        <td class="p-3 text-center">
+                            <button onclick="deleteCv('${item.id}')" class="text-rose-500 hover:text-rose-700 p-1.5 rounded transition" title="Xóa">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>` : ''}
+                    </tr>
+                `).join('');
             }
 
-            const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-            if (currentPage < 1) currentPage = 1;
-
-            const startIndex = (currentPage - 1) * PAGE_SIZE;
-            const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
-            const pageData = filteredData.slice(startIndex, endIndex);
-
-            const isVanthu = currentUser && currentUser.role === 'vanthu';
-
-            tableBody.innerHTML = pageData.map(item => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3">
-                        <span class="inline-block px-2 py-0.5 text-[11px] font-bold rounded ${item.type === 'Đến' ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'} mb-1">
-                            ${item.type}
-                        </span>
-                        <div class="font-bold text-slate-800">${escapeHtml(item.code)}</div>
-                    </td>
-                    <td class="p-3 text-slate-600 whitespace-nowrap text-xs">${escapeHtml(item.date)}</td>
-                    <td class="p-3 text-slate-700 font-medium">${escapeHtml(item.org)}</td>
-                    <td class="p-3 text-slate-600 max-w-xs truncate" title="${escapeHtml(item.summary)}">${escapeHtml(item.summary)}</td>
-                    <td class="p-3 text-center">
-                        ${item.link ? `<a href="${escapeHtml(item.link)}" target="_blank" class="inline-flex items-center justify-center w-7 h-7 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-full transition" title="Xem minh chứng"><i class="fa-solid fa-link text-xs"></i></a>` : `<span class="text-slate-300">-</span>`}
-                    </td>
-                    ${isVanthu ? `
-                    <td class="p-3 text-center">
-                        <button onclick="deleteCv('${item.id}')" class="inline-flex items-center justify-center w-7 h-7 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full transition" title="Xóa công văn">
-                            <i class="fa-solid fa-trash-can text-xs"></i>
-                        </button>
-                    </td>
-                    ` : ''}
-                </tr>
-            `).join('');
-
-            // Pagination Controls Update
-            document.getElementById('pagination-info').innerText = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${totalItems} công văn`;
-            document.getElementById('page-indicator').innerText = `${currentPage} / ${totalPages}`;
-            document.getElementById('btn-prev-page').disabled = (currentPage === 1);
-            document.getElementById('btn-next-page').disabled = (currentPage === totalPages);
+            // Thông tin phân trang
+            document.getElementById('pagination-info').innerText = `Hiển thị ${filtered.length > 0 ? startIdx + 1 : 0} - ${Math.min(startIdx + pageSize, filtered.length)} của ${filtered.length} công văn`;
+            document.getElementById('page-indicator').innerText = `Trang ${currentPage} / ${totalPages}`;
+            document.getElementById('prev-btn').disabled = currentPage === 1;
+            document.getElementById('next-btn').disabled = currentPage === totalPages || totalPages === 0;
         }
 
-        function changePage(delta) {
-            currentPage += delta;
+        function changePage(direction) {
+            currentPage += direction;
             renderTable();
         }
 
-        // Xóa công văn (dành cho vanthu)
-        window.deleteCv = function(id) {
-            if (currentUser.role !== 'vanthu') {
-                alert('Bạn không có quyền xóa công văn!');
-                return;
-            }
-            if (confirm('Bạn có chắc chắn muốn xóa công văn này khỏi hệ thống?')) {
-                db.ref('congvan/' + id).remove()
-                    .then(() => alert('Đã xóa công văn thành công.'))
-                    .catch((err) => alert('Lỗi khi xóa: ' + err.message));
-            }
-        };
-
-        // --- 6. Tab Switch & Trang Thống Kê & Báo Cáo ---
-        function switchTab(tab) {
-            const btnList = document.getElementById('tab-btn-list');
-            const btnStats = document.getElementById('tab-btn-stats');
-            const tabList = document.getElementById('tab-list');
-            const tabStats = document.getElementById('tab-stats');
-
-            if (tab === 'list') {
-                btnList.className = "py-3 px-5 text-sm font-bold flex items-center space-x-2 border-b-2 border-blue-600 text-blue-700 bg-blue-50/50 transition";
-                btnStats.className = "py-3 px-5 text-sm font-semibold flex items-center space-x-2 border-b-2 border-transparent text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition";
-                tabList.classList.remove('hidden');
-                tabStats.classList.add('hidden');
-            } else {
-                btnStats.className = "py-3 px-5 text-sm font-bold flex items-center space-x-2 border-b-2 border-blue-600 text-blue-700 bg-blue-50/50 transition";
-                btnList.className = "py-3 px-5 text-sm font-semibold flex items-center space-x-2 border-b-2 border-transparent text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition";
-                tabStats.classList.remove('hidden');
-                tabList.classList.add('hidden');
-                applyStatsFilter();
-            }
-        }
-
-        function applyStatsFilter() {
+        // Trang Thống kê
+        function runStatistics() {
             const fromDate = document.getElementById('stat-from-date').value;
             const toDate = document.getElementById('stat-to-date').value;
-            const category = document.getElementById('stat-category').value;
+            const filterType = document.getElementById('stat-filter-type').value;
 
-            let statsResult = [...allData];
+            let result = allData.filter(item => {
+                // Lọc thời gian theo ngày tạo công văn (item.date)
+                if (fromDate && item.date < fromDate) return false;
+                if (toDate && item.date > toDate) return false;
 
-            // Lọc theo khoảng thời gian
-            if (fromDate) {
-                statsResult = statsResult.filter(item => item.date >= fromDate);
+                // Lọc loại & phòng ban
+                if (filterType === 'Đến') {
+                    if (item.type !== 'Đến') return false;
+                } else if (filterType.startsWith('Đi - ')) {
+                    const dept = filterType.replace('Đi - ', '');
+                    if (item.type !== 'Đi' || item.org !== dept) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('res-total').innerText = result.length;
+            document.getElementById('res-incoming').innerText = result.filter(i => i.type === 'Đến').length;
+            document.getElementById('res-outgoing').innerText = result.filter(i => i.type === 'Đi').length;
+
+            const statsBody = document.getElementById('stats-table-body');
+            if (result.length === 0) {
+                statsBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">Không có dữ liệu trong khoảng thời gian và tiêu chí này.</td></tr>`;
+            } else {
+                statsBody.innerHTML = result.map(item => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3">
+                            <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded ${item.type === 'Đến' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'} mb-1">
+                                ${item.type}
+                            </span>
+                            <div class="font-bold text-slate-700">${escapeHtml(item.code)}</div>
+                        </td>
+                        <td class="p-3 text-slate-600 whitespace-nowrap">${escapeHtml(item.date)}</td>
+                        <td class="p-3 text-slate-600 font-medium">${escapeHtml(item.org)}</td>
+                        <td class="p-3 text-slate-600">${escapeHtml(item.summary)}</td>
+                    </tr>
+                `).join('');
             }
-            if (toDate) {
-                statsResult = statsResult.filter(item => item.date <= toDate);
-            }
-
-            // Lọc theo loại / phòng ban
-            if (category === 'incoming') {
-                statsResult = statsResult.filter(item => item.type === 'Đến');
-            } else if (category === 'outgoing_hctv') {
-                statsResult = statsResult.filter(item => item.type === 'Đi' && item.org === 'Phòng Hành chính - Tài vụ');
-            } else if (category === 'outgoing_dtkh') {
-                statsResult = statsResult.filter(item => item.type === 'Đi' && item.org === 'Phòng Đào tạo - KH và QLSV');
-            }
-
-            // Cập nhật Metrics Cards
-            document.getElementById('stat-card-total').innerText = statsResult.length;
-            document.getElementById('stat-card-incoming').innerText = statsResult.filter(i => i.type === 'Đến').length;
-            document.getElementById('stat-card-hctv').innerText = statsResult.filter(i => i.type === 'Đi' && i.org === 'Phòng Hành chính - Tài vụ').length;
-            document.getElementById('stat-card-dtkh').innerText = statsResult.filter(i => i.type === 'Đi' && i.org === 'Phòng Đào tạo - KH và QLSV').length;
-            document.getElementById('stats-count-badge').innerText = `${statsResult.length} công văn`;
-
-            // Render Bảng Thống kê chi tiết
-            const statTableBody = document.getElementById('stat-table-body');
-            if (statsResult.length === 0) {
-                statTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Không có dữ liệu công văn thỏa mãn điều kiện lọc.</td></tr>`;
-                return;
-            }
-
-            statTableBody.innerHTML = statsResult.map((item, idx) => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3 font-semibold text-slate-500 text-xs">${idx + 1}</td>
-                    <td class="p-3">
-                        <span class="inline-block px-2 py-0.5 text-[11px] font-bold rounded ${item.type === 'Đến' ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'} mb-1">
-                            ${item.type}
-                        </span>
-                        <div class="font-bold text-slate-800">${escapeHtml(item.code)}</div>
-                    </td>
-                    <td class="p-3 text-slate-600 whitespace-nowrap text-xs">${escapeHtml(item.date)}</td>
-                    <td class="p-3 text-slate-700 font-medium">${escapeHtml(item.org)}</td>
-                    <td class="p-3 text-slate-600 max-w-xs truncate" title="${escapeHtml(item.summary)}">${escapeHtml(item.summary)}</td>
-                    <td class="p-3 text-center">
-                        ${item.link ? `<a href="${escapeHtml(item.link)}" target="_blank" class="inline-flex items-center justify-center w-7 h-7 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-full transition" title="Xem minh chứng"><i class="fa-solid fa-link text-xs"></i></a>` : `<span class="text-slate-300">-</span>`}
-                    </td>
-                </tr>
-            `).join('');
         }
 
-        function resetStatsFilter() {
-            document.getElementById('stat-from-date').value = '';
-            document.getElementById('stat-to-date').value = '';
-            document.getElementById('stat-category').value = 'all';
-            applyStatsFilter();
-        }
-
-        // --- Helper Function ---
         function escapeHtml(text) {
             if (!text) return '';
-            return String(text)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
-
-        // Khởi chạy khi tải trang
-        checkAuthSession();
-        updateOrgField();
     </script>
 </body>
 </html>
