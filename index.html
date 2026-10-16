@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiểm tra kết nối Firebase</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f4f6f9;
+    }
+    .container {
+      background-color: #ffffff;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+    .status {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    .success {
+      color: #2e7d32;
+    }
+    .error {
+      color: #c62828;
+    }
+    .info {
+      color: #0288d1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Kiểm tra kết nối Firebase Realtime Database</h1>
+    <div id="status" class="status info">Đang kết nối tới Firebase...</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBDuk8MGrZxHi9Q9cVWSa8KyX2fze3TTzI",
+      authDomain: "qlcvph.firebaseapp.com",
+      databaseURL: "https://qlcvph-default-rtdb.firebaseio.com",
+      projectId: "qlcvph",
+      storageBucket: "qlcvph.firebasestorage.app",
+      messagingSenderId: "730585971673",
+      appId: "1:730585971673:web:bad0d1fd8bf672153b37c8",
+      measurementId: "G-4PEN2B2Q3E"
+    };
+
+    const statusEl = document.getElementById("status");
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+
+      set(ref(database, 'test_connection'), {
+        status: 'OK',
+        time: Date.now()
+      })
+      .then(() => {
+        statusEl.textContent = "KẾT NỐI KHỎI TẠO THÀNH CÔNG!";
+        statusEl.className = "status success";
+      })
+      .catch((error) => {
+        console.error("Lỗi khi ghi dữ liệu:", error);
+        statusEl.textContent = "LỖI KẾT NỐI: " + error.message;
+        statusEl.className = "status error";
+      });
+    } catch (error) {
+      console.error("Lỗi khởi tạo Firebase:", error);
+      statusEl.textContent = "LỖI KHỞI TẠO: " + error.message;
+      statusEl.className = "status error";
+    }
+  </script>
+</body>
+</html>
