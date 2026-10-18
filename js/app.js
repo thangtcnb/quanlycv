@@ -17,7 +17,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
+// Authentication Credentials
+const VALID_USERS = {
+  "vanthu": "vanthu123",
+  "quanly": "qlcv"
+};
+
 // State Management
+let currentUser = null;
 let allDispatches = []; // Raw list from Firebase
 let currentEditId = null;
 let currentPage = 1;
@@ -25,6 +32,17 @@ const ITEMS_PER_PAGE = 20;
 
 let deptChartInstance = null;
 let typeChartInstance = null;
+
+// DOM Elements - Auth & Screens
+const loginScreen = document.getElementById("loginScreen");
+const mainAppScreen = document.getElementById("mainAppScreen");
+const loginForm = document.getElementById("loginForm");
+const loginUsernameInput = document.getElementById("loginUsername");
+const loginPasswordInput = document.getElementById("loginPassword");
+const loginErrorMsg = document.getElementById("loginErrorMsg");
+const loginErrorText = document.getElementById("loginErrorText");
+const currentUserDisplay = document.getElementById("currentUserDisplay");
+const btnLogout = document.getElementById("btnLogout");
 
 // DOM Elements - Tabs
 const tabHomeBtn = document.getElementById("tabHomeBtn");
@@ -64,9 +82,11 @@ const paginationControls = document.getElementById("paginationControls");
 // DOM Elements - Statistics
 const statStartDate = document.getElementById("statStartDate");
 const statEndDate = document.getElementById("statEndDate");
+const statLoaiCongVan = document.getElementById("statLoaiCongVan");
+const statDeptFilterContainer = document.getElementById("statDeptFilterContainer");
+const statPhongBan = document.getElementById("statPhongBan");
 const btnStatFilter = document.getElementById("btnStatFilter");
 const btnStatReset = document.getElementById("btnStatReset");
-const btnGenerateSampleData = document.getElementById("btnGenerateSampleData");
 
 // Toast Notification Function
 function showNotification(message, type = "success") {
@@ -124,7 +144,56 @@ function setDefaultDate() {
   }
 }
 
-// Switch Navigation Tabs
+// -------------------------------------------------------------
+// 1. AUTHENTICATION LOGIC
+// -------------------------------------------------------------
+function checkAuthStatus() {
+  const savedUser = sessionStorage.getItem("qlcv_user") || localStorage.getItem("qlcv_user");
+  if (savedUser && VALID_USERS[savedUser]) {
+    currentUser = savedUser;
+    currentUserDisplay.textContent = currentUser;
+    loginScreen.classList.add("hidden");
+    mainAppScreen.classList.remove("hidden");
+    mainAppScreen.classList.add("flex");
+    initFirebaseListener();
+  } else {
+    currentUser = null;
+    loginScreen.classList.remove("hidden");
+    mainAppScreen.classList.add("hidden");
+    mainAppScreen.classList.remove("flex");
+  }
+}
+
+loginForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const username = loginUsernameInput.value.trim();
+  const password = loginPasswordInput.value.trim();
+
+  if (VALID_USERS[username] && VALID_USERS[username] === password) {
+    loginErrorMsg.classList.add("hidden");
+    sessionStorage.setItem("qlcv_user", username);
+    localStorage.setItem("qlcv_user", username);
+    showNotification(`Đăng nhập thành công! Chào mừng ${username}`);
+    checkAuthStatus();
+  } else {
+    loginErrorText.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác!";
+    loginErrorMsg.classList.remove("hidden");
+  }
+});
+
+btnLogout.addEventListener("click", () => {
+  sessionStorage.removeItem("qlcv_user");
+  localStorage.removeItem("qlcv_user");
+  loginUsernameInput.value = "";
+  loginPasswordInput.value = "";
+  loginErrorMsg.classList.add("hidden");
+  showNotification("Đã đăng xuất khỏi hệ thống.", "info");
+  checkAuthStatus();
+});
+
+// -------------------------------------------------------------
+// 2. NAVIGATION TABS
+// -------------------------------------------------------------
 function setupNavigationTabs() {
   tabHomeBtn.addEventListener("click", () => {
     tabHomeBtn.classList.add("active");
@@ -153,7 +222,9 @@ function setupNavigationTabs() {
   });
 }
 
-// Dynamic Field Logic for "Công văn Đến" vs "Công văn Đi"
+// -------------------------------------------------------------
+// 3. HOME TAB & DISPATCH FORM LOGIC
+// -------------------------------------------------------------
 function updateDynamicUnitField() {
   const isDen = loaiCongVanInput.value === "Công văn Đến";
 
@@ -175,39 +246,6 @@ function updateDynamicUnitField() {
 }
 
 loaiCongVanInput.addEventListener("change", updateDynamicUnitField);
-
-// Listen to Realtime Database
-function initFirebaseListener() {
-  const congVanRef = ref(database, "cong_van");
-
-  onValue(congVanRef, (snapshot) => {
-    const data = snapshot.val();
-    allDispatches = [];
-
-    if (data) {
-      Object.keys(data).forEach((key) => {
-        allDispatches.push({
-          id: key,
-          ...data[key]
-        });
-      });
-    }
-
-    // Sort newest first (by ngay_ban_hanh descending, then created_at descending)
-    allDispatches.sort((a, b) => {
-      if (b.ngay_ban_hanh !== a.ngay_ban_hanh) {
-        return (b.ngay_ban_hanh || "").localeCompare(a.ngay_ban_hanh || "");
-      }
-      return (b.created_at || 0) - (a.created_at || 0);
-    });
-
-    renderDispatchList();
-    runStatistics();
-  }, (error) => {
-    console.error("Firebase Read Error:", error);
-    showNotification("Lỗi kết nối Firebase: " + error.message, "error");
-  });
-}
 
 // Get Unit value according to document type
 function getUnitValue() {
@@ -344,6 +382,43 @@ window.deleteDispatch = async function(id) {
   }
 };
 
+// Listen to Realtime Database
+let isFirebaseListenerSet = false;
+function initFirebaseListener() {
+  if (isFirebaseListenerSet) return;
+  isFirebaseListenerSet = true;
+
+  const congVanRef = ref(database, "cong_van");
+
+  onValue(congVanRef, (snapshot) => {
+    const data = snapshot.val();
+    allDispatches = [];
+
+    if (data) {
+      Object.keys(data).forEach((key) => {
+        allDispatches.push({
+          id: key,
+          ...data[key]
+        });
+      });
+    }
+
+    // Sort newest first (by ngay_ban_hanh descending, then created_at descending)
+    allDispatches.sort((a, b) => {
+      if (b.ngay_ban_hanh !== a.ngay_ban_hanh) {
+        return (b.ngay_ban_hanh || "").localeCompare(a.ngay_ban_hanh || "");
+      }
+      return (b.created_at || 0) - (a.created_at || 0);
+    });
+
+    renderDispatchList();
+    runStatistics();
+  }, (error) => {
+    console.error("Firebase Read Error:", error);
+    showNotification("Lỗi kết nối Firebase: " + error.message, "error");
+  });
+}
+
 // Get Filtered Dispatches
 function getFilteredDispatches() {
   const query = (searchInput.value || "").trim().toLowerCase();
@@ -402,52 +477,50 @@ function renderDispatchList() {
 
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
-        <td class="px-3 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
-        <td class="px-3 py-3 font-semibold text-slate-900 whitespace-nowrap">
+        <td class="px-2.5 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
+        <td class="px-2.5 py-3 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
         </td>
-        <td class="px-3 py-3 whitespace-nowrap">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass}">
+        <td class="px-2.5 py-3">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${badgeClass}">
             <i class="fa-solid ${isDen ? 'fa-inbox' : 'fa-paper-plane'} mr-1"></i>
             ${escapeHtml(item.loai_cong_van)}
           </span>
         </td>
-        <td class="px-3 py-3 text-slate-700 max-w-[150px] truncate" title="${escapeHtml(item.phong_ban)}">
+        <td class="px-2.5 py-3 text-slate-700 font-medium break-words">
+          ${escapeHtml(item.loai_van_ban)}
+        </td>
+        <td class="px-2.5 py-3 text-slate-700 break-words" title="${escapeHtml(item.phong_ban)}">
           ${escapeHtml(item.phong_ban)}
         </td>
-        <td class="px-3 py-3 whitespace-nowrap text-slate-600">
+        <td class="px-2.5 py-3 whitespace-nowrap text-slate-600">
           ${formatDate(item.ngay_ban_hanh)}
         </td>
-        <td class="px-3 py-3 text-slate-800 max-w-[200px]">
-          <p class="line-clamp-2" title="${escapeHtml(item.trich_yeu)}">
+        <td class="px-2.5 py-3 text-slate-800 leading-relaxed">
+          <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
             ${escapeHtml(item.trich_yeu)}
-          </p>
+          </div>
+          <div class="mt-1 flex items-center space-x-2">
+            <button onclick="editDispatch('${item.id}')" class="text-amber-600 hover:text-amber-700 hover:underline text-[11px] font-medium inline-flex items-center">
+              <i class="fa-solid fa-pen-to-square mr-1"></i> Sửa
+            </button>
+            <span class="text-slate-300">|</span>
+            <button onclick="deleteDispatch('${item.id}')" class="text-rose-600 hover:text-rose-700 hover:underline text-[11px] font-medium inline-flex items-center">
+              <i class="fa-solid fa-trash-can mr-1"></i> Xóa
+            </button>
+          </div>
         </td>
-        <td class="px-3 py-3 whitespace-nowrap text-center">
+        <td class="px-2.5 py-3 text-center whitespace-nowrap">
           ${hasDriveLink ? `
             <a href="${escapeHtml(item.drive_link)}" target="_blank" rel="noopener noreferrer"
                class="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[11px] font-medium transition"
-               title="Mở Google Drive Link">
+               title="Mở Google Drive Link trong tab mới">
               <i class="fa-brands fa-google-drive text-emerald-600 mr-1 text-xs"></i>
               Xem
             </a>
           ` : `
             <span class="text-slate-300 text-[11px] italic">Không</span>
           `}
-        </td>
-        <td class="px-3 py-3 whitespace-nowrap text-center">
-          <div class="inline-flex items-center space-x-1">
-            <button onclick="editDispatch('${item.id}')"
-                    class="p-1 text-amber-600 hover:bg-amber-50 rounded transition"
-                    title="Sửa">
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteDispatch('${item.id}')"
-                    class="p-1 text-rose-600 hover:bg-rose-50 rounded transition"
-                    title="Xóa">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
         </td>
       </tr>
     `;
@@ -474,7 +547,6 @@ function renderPaginationControls(totalPages) {
 
   // Page Numbers
   for (let page = 1; page <= totalPages; page++) {
-    // Show first page, last page, current page, and pages around current
     if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
       const activeClass = page === currentPage ? "pagination-btn-active" : "pagination-btn-default";
       html += `
@@ -514,18 +586,44 @@ filterLoaiCongVan.addEventListener("change", () => {
   renderDispatchList();
 });
 
-// Statistics Logic
+// -------------------------------------------------------------
+// 4. TAB THỐNG KÊ (ANALYTICS & ENHANCED FILTERS)
+// -------------------------------------------------------------
+function updateStatDeptFilterVisibility() {
+  if (statLoaiCongVan.value === "Công văn Đi") {
+    statDeptFilterContainer.classList.remove("hidden");
+  } else {
+    statDeptFilterContainer.classList.add("hidden");
+    statPhongBan.value = "Tất cả phòng ban";
+  }
+}
+
+statLoaiCongVan.addEventListener("change", updateStatDeptFilterVisibility);
+
 function runStatistics() {
   const startDate = statStartDate.value;
   const endDate = statEndDate.value;
+  const selectedLoai = statLoaiCongVan.value;
+  const selectedDept = statPhongBan.value;
 
-  let filtered = allDispatches;
+  let filtered = [...allDispatches];
 
+  // 1. Date range filter
   if (startDate) {
     filtered = filtered.filter(item => item.ngay_ban_hanh >= startDate);
   }
   if (endDate) {
     filtered = filtered.filter(item => item.ngay_ban_hanh <= endDate);
+  }
+
+  // 2. Document type filter ("Tất cả", "Công văn Đến", "Công văn Đi")
+  if (selectedLoai !== "Tất cả") {
+    filtered = filtered.filter(item => item.loai_cong_van === selectedLoai);
+  }
+
+  // 3. Department filter for "Công văn Đi"
+  if (selectedLoai === "Công văn Đi" && selectedDept !== "Tất cả phòng ban") {
+    filtered = filtered.filter(item => item.phong_ban === selectedDept);
   }
 
   const totalCount = filtered.length;
@@ -577,7 +675,7 @@ function renderDeptTable(unitCounts) {
     container.innerHTML = `
       <tr>
         <td colspan="4" class="px-3 py-6 text-center text-slate-400 text-xs">
-          Không có dữ liệu trong khoảng thời gian đã chọn.
+          Không có dữ liệu trong khoảng thời gian và điều kiện lọc đã chọn.
         </td>
       </tr>
     `;
@@ -713,124 +811,20 @@ btnStatFilter.addEventListener("click", runStatistics);
 btnStatReset.addEventListener("click", () => {
   statStartDate.value = "";
   statEndDate.value = "";
+  statLoaiCongVan.value = "Tất cả";
+  statPhongBan.value = "Tất cả phòng ban";
+  updateStatDeptFilterVisibility();
   runStatistics();
   showNotification("Đã đặt lại bộ lọc thống kê", "info");
 });
 
-// Helper Function: Generate 30 Random Sample Dispatches
-async function generate30SampleData() {
-  if (!confirm("Bạn có chắc chắn muốn tạo 30 dữ liệu công văn mẫu ngẫu nhiên lên Firebase không?")) {
-    return;
-  }
-
-  btnGenerateSampleData.disabled = true;
-  btnGenerateSampleData.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sm mr-2"></i> Đang tạo 30 mẫu...`;
-
-  const denAuthorities = [
-    "Bộ Giáo dục và Đào tạo",
-    "Bộ Khoa học và Công nghệ",
-    "Bộ Tài chính",
-    "UBND Thành phố",
-    "Sở Giáo dục và Đào tạo",
-    "Đại học Quốc gia",
-    "Thành ủy",
-    "Bảo hiểm Xã hội Tỉnh"
-  ];
-
-  const diDepartments = [
-    "Phòng Hành chính - Tài vụ",
-    "Phòng Đào tạo - Khoa học và QLSV"
-  ];
-
-  const docTypes = [
-    "Quyết định",
-    "Thông báo",
-    "Tờ trình",
-    "Kế hoạch",
-    "Công văn",
-    "Báo cáo",
-    "Hướng dẫn"
-  ];
-
-  const sampleSummaries = [
-    "Về việc ban hành quy định đào tạo và chuẩn đầu ra ngoại ngữ cho sinh viên",
-    "Thông báo về kế hoạch tổ chức hội nghị khoa học sinh viên cấp Phân hiệu năm 2025",
-    "Tờ trình phê duyệt dự toán kinh phí mua sắm thiết bị công nghệ thông tin phục vụ giảng dạy",
-    "Về việc khen thưởng các cá nhân và tập thể có thành tích xuất sắc trong công tác tuyển sinh",
-    "Hướng dẫn thực hiện kê khai và quyết toán thuế thu nhập cá nhân năm 2024",
-    "Báo cáo tổng kết công tác quản lý sinh viên và đảm bảo an ninh trật tự học đường",
-    "Kế hoạch triển khai đợt thực tập tốt nghiệp và kiểm tra tay nghề cho sinh viên khóa cuối",
-    "Về việc tăng cường công tác phòng chống dịch bệnh và vệ sinh an toàn thực phẩm trong trường",
-    "Thông báo lịch nghỉ lễ và phân công trực ca bảo vệ tài sản cơ quan",
-    "Quyết định thành lập Hội đồng đánh giá luận văn thạc sĩ đợt 1 năm 2025"
-  ];
-
-  const driveLinks = [
-    "https://drive.google.com/file/d/1vA_sample_drive_link_01/view",
-    "https://drive.google.com/file/d/1vB_sample_drive_link_02/view",
-    "https://drive.google.com/file/d/1vC_sample_drive_link_03/view",
-    ""
-  ];
-
-  const congVanRef = ref(database, "cong_van");
-  let createdCount = 0;
-
-  try {
-    for (let i = 1; i <= 30; i++) {
-      const isDen = Math.random() > 0.4; // 60% Đến, 40% Đi
-      const loai_cong_van = isDen ? "Công văn Đến" : "Công văn Đi";
-
-      const unit = isDen
-        ? denAuthorities[Math.floor(Math.random() * denAuthorities.length)]
-        : diDepartments[Math.floor(Math.random() * diDepartments.length)];
-
-      const loai_van_ban = docTypes[Math.floor(Math.random() * docTypes.length)];
-      const trich_yeu = sampleSummaries[Math.floor(Math.random() * sampleSummaries.length)];
-      const drive_link = driveLinks[Math.floor(Math.random() * driveLinks.length)];
-
-      // Generate random date between Jan 2025 and Mar 2025
-      const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0");
-      const randomMonth = String(Math.floor(Math.random() * 3) + 1).padStart(2, "0");
-      const ngay_ban_hanh = `2025-${randomMonth}-${randomDay}`;
-
-      const soNum = Math.floor(Math.random() * 300) + 1;
-      const so_ky_hieu = isDen ? `${soNum}/CV-${unit.substring(0, 3).toUpperCase()}` : `${soNum}/QĐ-PH`;
-
-      const record = {
-        so_ky_hieu,
-        loai_cong_van,
-        phong_ban: unit,
-        loai_van_ban,
-        ngay_ban_hanh,
-        trich_yeu: `${trich_yeu} (Mẫu #${i})`,
-        drive_link,
-        created_at: Date.now() - (30 - i) * 60000
-      };
-
-      const newRef = push(congVanRef);
-      await set(newRef, record);
-      createdCount++;
-    }
-
-    showNotification(`Đã tự động tạo thành công 30 công văn mẫu!`, "success");
-  } catch (err) {
-    console.error("Error generating sample data:", err);
-    showNotification("Lỗi khi tạo dữ liệu mẫu: " + err.message, "error");
-  } finally {
-    btnGenerateSampleData.disabled = false;
-    btnGenerateSampleData.innerHTML = `
-      <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
-      <span>Tạo 30 dữ liệu mẫu</span>
-    `;
-  }
-}
-
-btnGenerateSampleData.addEventListener("click", generate30SampleData);
-
-// App Initialization
+// -------------------------------------------------------------
+// APP INITIALIZATION
+// -------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   setupNavigationTabs();
   updateDynamicUnitField();
+  updateStatDeptFilterVisibility();
   setDefaultDate();
-  initFirebaseListener();
+  checkAuthStatus();
 });
