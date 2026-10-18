@@ -7,6 +7,23 @@ body {
   color: #1e293b;
 }
 
+/* Navigation Tab Active / Inactive states */
+.nav-tab {
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav-tab.active {
+  border-bottom: 3px solid #fbbf24; /* amber-400 */
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.nav-tab:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
@@ -25,12 +42,57 @@ body {
 
 /* Animation utilities */
 .fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.25s ease-in-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Pagination buttons */
+.pagination-btn {
+  min-width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.pagination-btn-active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+}
+
+.pagination-btn-default {
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.pagination-btn-default:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.pagination-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Line Clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Print styling */

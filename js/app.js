@@ -20,10 +20,19 @@ const database = getDatabase(app);
 // State Management
 let allDispatches = []; // Raw list from Firebase
 let currentEditId = null;
+let currentPage = 1;
+const ITEMS_PER_PAGE = 20;
+
 let deptChartInstance = null;
 let typeChartInstance = null;
 
-// DOM Elements
+// DOM Elements - Tabs
+const tabHomeBtn = document.getElementById("tabHomeBtn");
+const tabStatsBtn = document.getElementById("tabStatsBtn");
+const tabHomeContent = document.getElementById("tabHomeContent");
+const tabStatsContent = document.getElementById("tabStatsContent");
+
+// DOM Elements - Form
 const form = document.getElementById("dispatchForm");
 const formTitle = document.getElementById("formTitle");
 const submitBtn = document.getElementById("submitBtn");
@@ -32,24 +41,32 @@ const cancelEditBtn = document.getElementById("cancelEditBtn");
 const dispatchIdInput = document.getElementById("dispatchId");
 const soKyHieuInput = document.getElementById("soKyHieu");
 const loaiCongVanInput = document.getElementById("loaiCongVan");
-const loaiVanBanInput = document.getElementById("loaiVanBan");
-const phongBanInput = document.getElementById("phongBan");
-const ngayBanHanhInput = document.getElementById("ngayBanHanh");
-const trichYeuInput = document.getElementById("trichYeu");
-const driveLinkInput = document.getElementById("driveLink");
 
+const unitLabel = document.getElementById("unitLabel");
+const unitTextContainer = document.getElementById("unitTextContainer");
+const unitInputText = document.getElementById("unitInputText");
+const unitSelectContainer = document.getElementById("unitSelectContainer");
+const unitSelectBox = document.getElementById("unitSelectBox");
+
+const loaiVanBanInput = document.getElementById("loaiVanBan");
+const ngayBanHanhInput = document.getElementById("ngayBanHanh");
+const driveLinkInput = document.getElementById("driveLink");
+const trichYeuInput = document.getElementById("trichYeu");
+
+// DOM Elements - Table & Search
 const searchInput = document.getElementById("searchInput");
 const filterLoaiCongVan = document.getElementById("filterLoaiCongVan");
-const filterPhongBan = document.getElementById("filterPhongBan");
-
 const dispatchTableBody = document.getElementById("dispatchTableBody");
 const totalItemsBadge = document.getElementById("totalItemsBadge");
+const paginationInfo = document.getElementById("paginationInfo");
+const paginationControls = document.getElementById("paginationControls");
 
-// Statistics Inputs
+// DOM Elements - Statistics
 const statStartDate = document.getElementById("statStartDate");
 const statEndDate = document.getElementById("statEndDate");
 const btnStatFilter = document.getElementById("btnStatFilter");
 const btnStatReset = document.getElementById("btnStatReset");
+const btnGenerateSampleData = document.getElementById("btnGenerateSampleData");
 
 // Toast Notification Function
 function showNotification(message, type = "success") {
@@ -63,7 +80,7 @@ function showNotification(message, type = "success") {
   toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 transition-all duration-300 transform translate-y-2 opacity-0 fade-in z-50`;
   toast.innerHTML = `
     <i class="fa-solid ${icon} text-lg"></i>
-    <span class="text-sm font-medium">${message}</span>
+    <span class="text-xs font-semibold">${message}</span>
   `;
 
   toastContainer.appendChild(toast);
@@ -88,7 +105,18 @@ function formatDate(dateStr) {
   return dateStr;
 }
 
-// Set Today default on date input if empty
+// Escape HTML Helper
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Set Today default on date input
 function setDefaultDate() {
   if (!ngayBanHanhInput.value) {
     const today = new Date().toISOString().split("T")[0];
@@ -96,7 +124,59 @@ function setDefaultDate() {
   }
 }
 
-// Listen to Realtime Database changes
+// Switch Navigation Tabs
+function setupNavigationTabs() {
+  tabHomeBtn.addEventListener("click", () => {
+    tabHomeBtn.classList.add("active");
+    tabHomeBtn.classList.remove("text-indigo-200");
+    tabHomeBtn.classList.add("text-white", "bg-white/10");
+
+    tabStatsBtn.classList.remove("active", "text-white", "bg-white/10");
+    tabStatsBtn.classList.add("text-indigo-200");
+
+    tabHomeContent.classList.remove("hidden");
+    tabStatsContent.classList.add("hidden");
+  });
+
+  tabStatsBtn.addEventListener("click", () => {
+    tabStatsBtn.classList.add("active");
+    tabStatsBtn.classList.remove("text-indigo-200");
+    tabStatsBtn.classList.add("text-white", "bg-white/10");
+
+    tabHomeBtn.classList.remove("active", "text-white", "bg-white/10");
+    tabHomeBtn.classList.add("text-indigo-200");
+
+    tabStatsContent.classList.remove("hidden");
+    tabHomeContent.classList.add("hidden");
+
+    runStatistics();
+  });
+}
+
+// Dynamic Field Logic for "Công văn Đến" vs "Công văn Đi"
+function updateDynamicUnitField() {
+  const isDen = loaiCongVanInput.value === "Công văn Đến";
+
+  if (isDen) {
+    unitLabel.innerHTML = `Nơi ban hành công văn <span class="text-rose-500">*</span>`;
+    unitTextContainer.classList.remove("hidden");
+    unitSelectContainer.classList.add("hidden");
+
+    unitInputText.setAttribute("required", "true");
+    unitSelectBox.removeAttribute("required");
+  } else {
+    unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
+    unitTextContainer.classList.add("hidden");
+    unitSelectContainer.classList.remove("hidden");
+
+    unitInputText.removeAttribute("required");
+    unitSelectBox.setAttribute("required", "true");
+  }
+}
+
+loaiCongVanInput.addEventListener("change", updateDynamicUnitField);
+
+// Listen to Realtime Database
 function initFirebaseListener() {
   const congVanRef = ref(database, "cong_van");
 
@@ -129,19 +209,28 @@ function initFirebaseListener() {
   });
 }
 
+// Get Unit value according to document type
+function getUnitValue() {
+  if (loaiCongVanInput.value === "Công văn Đến") {
+    return unitInputText.value.trim();
+  } else {
+    return unitSelectBox.value;
+  }
+}
+
 // Form Submission Handler
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const so_ky_hieu = soKyHieuInput.value.trim();
   const loai_cong_van = loaiCongVanInput.value;
+  const unitVal = getUnitValue();
   const loai_van_ban = loaiVanBanInput.value.trim();
-  const phong_ban = phongBanInput.value;
   const ngay_ban_hanh = ngayBanHanhInput.value;
   const trich_yeu = trichYeuInput.value.trim();
   const drive_link = driveLinkInput.value.trim();
 
-  if (!so_ky_hieu || !loai_cong_van || !loai_van_ban || !phong_ban || !ngay_ban_hanh || !trich_yeu) {
+  if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
     showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
     return;
   }
@@ -149,8 +238,8 @@ form.addEventListener("submit", async (e) => {
   const dispatchData = {
     so_ky_hieu,
     loai_cong_van,
+    phong_ban: unitVal,
     loai_van_ban,
-    phong_ban,
     ngay_ban_hanh,
     trich_yeu,
     drive_link,
@@ -162,13 +251,11 @@ form.addEventListener("submit", async (e) => {
 
   try {
     if (currentEditId) {
-      // Update existing record
       const itemRef = ref(database, `cong_van/${currentEditId}`);
       await update(itemRef, dispatchData);
       showNotification("Cập nhật công văn thành công!");
       resetForm();
     } else {
-      // Create new record
       const congVanRef = ref(database, "cong_van");
       const newRef = push(congVanRef);
       await set(newRef, dispatchData);
@@ -180,7 +267,9 @@ form.addEventListener("submit", async (e) => {
     showNotification("Lỗi khi lưu công văn: " + error.message, "error");
   } finally {
     submitBtn.disabled = false;
-    submitBtn.innerHTML = currentEditId ? `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật` : `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
+    submitBtn.innerHTML = currentEditId
+      ? `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`
+      : `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
   }
 });
 
@@ -190,9 +279,12 @@ function resetForm() {
   currentEditId = null;
   dispatchIdInput.value = "";
   formTitle.textContent = "Nhập Công Văn Mới";
-  submitBtn.className = "w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow transition flex items-center justify-center cursor-pointer";
+  submitBtn.className = "w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center justify-center cursor-pointer";
   submitBtn.innerHTML = `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
   cancelEditBtn.classList.add("hidden");
+
+  loaiCongVanInput.value = "Công văn Đến";
+  updateDynamicUnitField();
   setDefaultDate();
 }
 
@@ -210,18 +302,25 @@ window.editDispatch = function(id) {
   dispatchIdInput.value = id;
   soKyHieuInput.value = item.so_ky_hieu || "";
   loaiCongVanInput.value = item.loai_cong_van || "Công văn Đến";
+
+  updateDynamicUnitField();
+
+  if (item.loai_cong_van === "Công văn Đến") {
+    unitInputText.value = item.phong_ban || "";
+  } else {
+    unitSelectBox.value = item.phong_ban || "Phòng Hành chính - Tài vụ";
+  }
+
   loaiVanBanInput.value = item.loai_van_ban || "";
-  phongBanInput.value = item.phong_ban || "Phòng Hành chính - Tài vụ";
   ngayBanHanhInput.value = item.ngay_ban_hanh || "";
   trichYeuInput.value = item.trich_yeu || "";
   driveLinkInput.value = item.drive_link || "";
 
   formTitle.textContent = "Chỉnh Sửa Công Văn";
-  submitBtn.className = "w-full md:w-auto px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow transition flex items-center justify-center cursor-pointer";
+  submitBtn.className = "w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center justify-center cursor-pointer";
   submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`;
   cancelEditBtn.classList.remove("hidden");
 
-  // Scroll smooth to form
   document.getElementById("formSection").scrollIntoView({ behavior: "smooth" });
 };
 
@@ -245,97 +344,106 @@ window.deleteDispatch = async function(id) {
   }
 };
 
-// Render Dispatch Table
-function renderDispatchList() {
+// Get Filtered Dispatches
+function getFilteredDispatches() {
   const query = (searchInput.value || "").trim().toLowerCase();
   const selectedLoai = filterLoaiCongVan.value;
-  const selectedDept = filterPhongBan.value;
 
-  const filtered = allDispatches.filter((item) => {
+  return allDispatches.filter((item) => {
     const matchSearch =
       !query ||
       (item.so_ky_hieu && item.so_ky_hieu.toLowerCase().includes(query)) ||
       (item.trich_yeu && item.trich_yeu.toLowerCase().includes(query)) ||
-      (item.loai_van_ban && item.loai_van_ban.toLowerCase().includes(query));
+      (item.loai_van_ban && item.loai_van_ban.toLowerCase().includes(query)) ||
+      (item.phong_ban && item.phong_ban.toLowerCase().includes(query));
 
     const matchLoai = !selectedLoai || item.loai_cong_van === selectedLoai;
-    const matchDept = !selectedDept || item.phong_ban === selectedDept;
 
-    return matchSearch && matchLoai && matchDept;
+    return matchSearch && matchLoai;
   });
+}
 
+// Render Table with Pagination (Max 20 per page)
+function renderDispatchList() {
+  const filtered = getFilteredDispatches();
   totalItemsBadge.textContent = `${filtered.length} / ${allDispatches.length} văn bản`;
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+  if (currentPage > totalPages) {
+    currentPage = totalPages;
+  }
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
+  const currentItems = filtered.slice(startIndex, endIndex);
 
   if (filtered.length === 0) {
     dispatchTableBody.innerHTML = `
       <tr>
-        <td colspan="7" class="px-6 py-12 text-center text-slate-400">
-          <i class="fa-regular fa-folder-open text-4xl mb-3 block"></i>
+        <td colspan="8" class="px-4 py-12 text-center text-slate-400">
+          <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
           Không tìm thấy công văn nào phù hợp.
         </td>
       </tr>
     `;
+    paginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 văn bản";
+    paginationControls.innerHTML = "";
     return;
   }
 
-  dispatchTableBody.innerHTML = filtered.map((item, index) => {
+  dispatchTableBody.innerHTML = currentItems.map((item, index) => {
     const isDen = item.loai_cong_van === "Công văn Đến";
     const badgeClass = isDen
       ? "bg-blue-100 text-blue-800 border-blue-200"
       : "bg-purple-100 text-purple-800 border-purple-200";
 
+    const rowNum = startIndex + index + 1;
     const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
 
     return `
-      <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-sm">
-        <td class="px-4 py-3 font-medium text-slate-500 text-center">${index + 1}</td>
-        <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+        <td class="px-3 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
+        <td class="px-3 py-3 font-semibold text-slate-900 whitespace-nowrap">
           ${escapeHtml(item.so_ky_hieu)}
         </td>
-        <td class="px-4 py-3 whitespace-nowrap">
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeClass}">
-            <i class="fa-solid ${isDen ? 'fa-inbox' : 'fa-paper-plane'} mr-1.5"></i>
+        <td class="px-3 py-3 whitespace-nowrap">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass}">
+            <i class="fa-solid ${isDen ? 'fa-inbox' : 'fa-paper-plane'} mr-1"></i>
             ${escapeHtml(item.loai_cong_van)}
           </span>
         </td>
-        <td class="px-4 py-3 whitespace-nowrap text-slate-700">
-          <span class="inline-block bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-xs border border-slate-200">
-            ${escapeHtml(item.loai_van_ban)}
-          </span>
-        </td>
-        <td class="px-4 py-3 text-slate-700 whitespace-nowrap text-xs">
+        <td class="px-3 py-3 text-slate-700 max-w-[150px] truncate" title="${escapeHtml(item.phong_ban)}">
           ${escapeHtml(item.phong_ban)}
         </td>
-        <td class="px-4 py-3 whitespace-nowrap text-slate-600">
-          <i class="fa-regular fa-calendar-check text-slate-400 mr-1"></i>
+        <td class="px-3 py-3 whitespace-nowrap text-slate-600">
           ${formatDate(item.ngay_ban_hanh)}
         </td>
-        <td class="px-4 py-3 text-slate-800 max-w-xs md:max-w-md">
+        <td class="px-3 py-3 text-slate-800 max-w-[200px]">
           <p class="line-clamp-2" title="${escapeHtml(item.trich_yeu)}">
             ${escapeHtml(item.trich_yeu)}
           </p>
         </td>
-        <td class="px-4 py-3 whitespace-nowrap text-center">
+        <td class="px-3 py-3 whitespace-nowrap text-center">
           ${hasDriveLink ? `
             <a href="${escapeHtml(item.drive_link)}" target="_blank" rel="noopener noreferrer"
-               class="inline-flex items-center px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-md text-xs font-medium transition"
-               title="Mở Drive Link">
-              <i class="fa-brands fa-google-drive text-emerald-600 mr-1.5 text-sm"></i>
-              Xem File
+               class="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[11px] font-medium transition"
+               title="Mở Google Drive Link">
+              <i class="fa-brands fa-google-drive text-emerald-600 mr-1 text-xs"></i>
+              Xem
             </a>
           ` : `
-            <span class="text-slate-400 text-xs italic">Không có</span>
+            <span class="text-slate-300 text-[11px] italic">Không</span>
           `}
         </td>
-        <td class="px-4 py-3 whitespace-nowrap text-center">
+        <td class="px-3 py-3 whitespace-nowrap text-center">
           <div class="inline-flex items-center space-x-1">
             <button onclick="editDispatch('${item.id}')"
-                    class="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition"
-                    title="Chỉnh sửa">
+                    class="p-1 text-amber-600 hover:bg-amber-50 rounded transition"
+                    title="Sửa">
               <i class="fa-solid fa-pen-to-square"></i>
             </button>
             <button onclick="deleteDispatch('${item.id}')"
-                    class="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition"
+                    class="p-1 text-rose-600 hover:bg-rose-50 rounded transition"
                     title="Xóa">
               <i class="fa-solid fa-trash-can"></i>
             </button>
@@ -344,25 +452,69 @@ function renderDispatchList() {
       </tr>
     `;
   }).join("");
+
+  // Update Pagination Info
+  paginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filtered.length} văn bản`;
+
+  // Render Pagination Buttons
+  renderPaginationControls(totalPages);
 }
 
-// Escape HTML Helper
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+// Pagination Controls Renderer
+function renderPaginationControls(totalPages) {
+  let html = "";
+
+  // Prev Button
+  const prevDisabled = currentPage === 1 ? "pagination-btn-disabled" : "";
+  html += `
+    <button onclick="goToPage(${currentPage - 1})" class="pagination-btn pagination-btn-default ${prevDisabled}" title="Trang trước">
+      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+    </button>
+  `;
+
+  // Page Numbers
+  for (let page = 1; page <= totalPages; page++) {
+    // Show first page, last page, current page, and pages around current
+    if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+      const activeClass = page === currentPage ? "pagination-btn-active" : "pagination-btn-default";
+      html += `
+        <button onclick="goToPage(${page})" class="pagination-btn ${activeClass}">
+          ${page}
+        </button>
+      `;
+    } else if (page === currentPage - 2 || page === currentPage + 2) {
+      html += `<span class="px-1 text-slate-400">...</span>`;
+    }
+  }
+
+  // Next Button
+  const nextDisabled = currentPage === totalPages ? "pagination-btn-disabled" : "";
+  html += `
+    <button onclick="goToPage(${currentPage + 1})" class="pagination-btn pagination-btn-default ${nextDisabled}" title="Trang sau">
+      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+    </button>
+  `;
+
+  paginationControls.innerHTML = html;
 }
+
+window.goToPage = function(page) {
+  currentPage = page;
+  renderDispatchList();
+};
 
 // Event Listeners for Filters
-searchInput.addEventListener("input", renderDispatchList);
-filterLoaiCongVan.addEventListener("change", renderDispatchList);
-filterPhongBan.addEventListener("change", renderDispatchList);
+searchInput.addEventListener("input", () => {
+  currentPage = 1;
+  renderDispatchList();
+});
 
-// Statistics Calculation & Rendering
+filterLoaiCongVan.addEventListener("change", () => {
+  currentPage = 1;
+  renderDispatchList();
+});
+
+// Statistics Logic
 function runStatistics() {
   const startDate = statStartDate.value;
   const endDate = statEndDate.value;
@@ -376,7 +528,6 @@ function runStatistics() {
     filtered = filtered.filter(item => item.ngay_ban_hanh <= endDate);
   }
 
-  // General Metrics
   const totalCount = filtered.length;
   const denCount = filtered.filter(i => i.loai_cong_van === "Công văn Đến").length;
   const diCount = filtered.filter(i => i.loai_cong_van === "Công văn Đi").length;
@@ -385,38 +536,23 @@ function runStatistics() {
   document.getElementById("statDenCount").textContent = denCount;
   document.getElementById("statDiCount").textContent = diCount;
 
-  // Breakdown by 2 Departments
-  const deptList = [
-    "Phòng Hành chính - Tài vụ",
-    "Phòng Đào tạo - Khoa học và QLSV"
-  ];
+  // Breakdown by Units/Departments
+  const unitCounts = {};
 
-  const deptCounts = {};
-  deptList.forEach(dept => {
-    deptCounts[dept] = {
-      total: 0,
-      den: 0,
-      di: 0
-    };
+  filtered.forEach(item => {
+    const unitName = (item.phong_ban || "Chưa rõ").trim();
+    if (!unitCounts[unitName]) {
+      unitCounts[unitName] = { total: 0, den: 0, di: 0 };
+    }
+    unitCounts[unitName].total++;
+    if (item.loai_cong_van === "Công văn Đến") unitCounts[unitName].den++;
+    if (item.loai_cong_van === "Công văn Đi") unitCounts[unitName].di++;
   });
 
-  // Breakdown by Document Types (Loại văn bản)
+  // Breakdown by Document Types
   const typeCounts = {};
 
   filtered.forEach(item => {
-    const dept = item.phong_ban;
-    if (deptCounts[dept]) {
-      deptCounts[dept].total++;
-      if (item.loai_cong_van === "Công văn Đến") deptCounts[dept].den++;
-      if (item.loai_cong_van === "Công văn Đi") deptCounts[dept].di++;
-    } else if (dept) {
-      deptCounts[dept] = {
-        total: 1,
-        den: item.loai_cong_van === "Công văn Đến" ? 1 : 0,
-        di: item.loai_cong_van === "Công văn Đi" ? 1 : 0
-      };
-    }
-
     const typeName = (item.loai_van_ban || "Chưa phân loại").trim();
     if (!typeCounts[typeName]) {
       typeCounts[typeName] = { total: 0, den: 0, di: 0 };
@@ -426,24 +562,36 @@ function runStatistics() {
     if (item.loai_cong_van === "Công văn Đi") typeCounts[typeName].di++;
   });
 
-  renderDeptTable(deptCounts);
+  renderDeptTable(unitCounts);
   renderTypeTable(typeCounts);
-  renderCharts(deptCounts, typeCounts);
+  renderCharts(unitCounts, typeCounts);
 }
 
-// Render Department Breakdown Table
-function renderDeptTable(deptCounts) {
+function renderDeptTable(unitCounts) {
   const container = document.getElementById("statDeptTableBody");
   if (!container) return;
 
-  const rows = Object.keys(deptCounts).map(dept => {
-    const data = deptCounts[dept];
+  const units = Object.keys(unitCounts).sort((a, b) => unitCounts[b].total - unitCounts[a].total);
+
+  if (units.length === 0) {
+    container.innerHTML = `
+      <tr>
+        <td colspan="4" class="px-3 py-6 text-center text-slate-400 text-xs">
+          Không có dữ liệu trong khoảng thời gian đã chọn.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const rows = units.map(u => {
+    const data = unitCounts[u];
     return `
-      <tr class="border-b border-slate-100 hover:bg-slate-50 text-sm">
-        <td class="px-4 py-2.5 font-medium text-slate-800">${escapeHtml(dept)}</td>
-        <td class="px-4 py-2.5 text-center font-bold text-blue-600">${data.total}</td>
-        <td class="px-4 py-2.5 text-center text-emerald-600">${data.den}</td>
-        <td class="px-4 py-2.5 text-center text-purple-600">${data.di}</td>
+      <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
+        <td class="px-3 py-2 font-medium text-slate-800">${escapeHtml(u)}</td>
+        <td class="px-3 py-2 text-center font-bold text-blue-600">${data.total}</td>
+        <td class="px-3 py-2 text-center text-emerald-600">${data.den}</td>
+        <td class="px-3 py-2 text-center text-purple-600">${data.di}</td>
       </tr>
     `;
   });
@@ -451,7 +599,6 @@ function renderDeptTable(deptCounts) {
   container.innerHTML = rows.join("");
 }
 
-// Render Type Breakdown Table
 function renderTypeTable(typeCounts) {
   const container = document.getElementById("statTypeTableBody");
   if (!container) return;
@@ -461,8 +608,8 @@ function renderTypeTable(typeCounts) {
   if (types.length === 0) {
     container.innerHTML = `
       <tr>
-        <td colspan="4" class="px-4 py-6 text-center text-slate-400 text-sm">
-          Chưa có dữ liệu loại văn bản.
+        <td colspan="4" class="px-3 py-6 text-center text-slate-400 text-xs">
+          Không có dữ liệu loại văn bản.
         </td>
       </tr>
     `;
@@ -472,11 +619,11 @@ function renderTypeTable(typeCounts) {
   const rows = types.map(t => {
     const data = typeCounts[t];
     return `
-      <tr class="border-b border-slate-100 hover:bg-slate-50 text-sm">
-        <td class="px-4 py-2.5 font-medium text-slate-800">${escapeHtml(t)}</td>
-        <td class="px-4 py-2.5 text-center font-bold text-blue-600">${data.total}</td>
-        <td class="px-4 py-2.5 text-center text-emerald-600">${data.den}</td>
-        <td class="px-4 py-2.5 text-center text-purple-600">${data.di}</td>
+      <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
+        <td class="px-3 py-2 font-medium text-slate-800">${escapeHtml(t)}</td>
+        <td class="px-3 py-2 text-center font-bold text-blue-600">${data.total}</td>
+        <td class="px-3 py-2 text-center text-emerald-600">${data.den}</td>
+        <td class="px-3 py-2 text-center text-purple-600">${data.di}</td>
       </tr>
     `;
   });
@@ -484,23 +631,22 @@ function renderTypeTable(typeCounts) {
   container.innerHTML = rows.join("");
 }
 
-// Render Chart.js Visuals
-function renderCharts(deptCounts, typeCounts) {
+function renderCharts(unitCounts, typeCounts) {
   if (typeof Chart === "undefined") return;
 
-  // 1. Department Chart
+  // 1. Department / Unit Chart
   const deptCtx = document.getElementById("deptChart");
   if (deptCtx) {
     if (deptChartInstance) deptChartInstance.destroy();
 
-    const deptLabels = Object.keys(deptCounts);
-    const denData = deptLabels.map(d => deptCounts[d].den);
-    const diData = deptLabels.map(d => deptCounts[d].di);
+    const labels = Object.keys(unitCounts);
+    const denData = labels.map(l => unitCounts[l].den);
+    const diData = labels.map(l => unitCounts[l].di);
 
     deptChartInstance = new Chart(deptCtx, {
       type: 'bar',
       data: {
-        labels: deptLabels.map(label => label.length > 20 ? label.substring(0, 20) + "..." : label),
+        labels: labels.map(l => l.length > 18 ? l.substring(0, 18) + "..." : l),
         datasets: [
           {
             label: 'Công văn Đến',
@@ -520,8 +666,7 @@ function renderCharts(deptCounts, typeCounts) {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom' },
-          title: { display: false }
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
         },
         scales: {
           y: { beginAtZero: true, ticks: { precision: 0 } }
@@ -556,14 +701,14 @@ function renderCharts(deptCounts, typeCounts) {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 12 } }
+          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
         }
       }
     });
   }
 }
 
-// Statistics Filters Event Listeners
+// Statistics Event Handlers
 btnStatFilter.addEventListener("click", runStatistics);
 btnStatReset.addEventListener("click", () => {
   statStartDate.value = "";
@@ -572,8 +717,120 @@ btnStatReset.addEventListener("click", () => {
   showNotification("Đã đặt lại bộ lọc thống kê", "info");
 });
 
+// Helper Function: Generate 30 Random Sample Dispatches
+async function generate30SampleData() {
+  if (!confirm("Bạn có chắc chắn muốn tạo 30 dữ liệu công văn mẫu ngẫu nhiên lên Firebase không?")) {
+    return;
+  }
+
+  btnGenerateSampleData.disabled = true;
+  btnGenerateSampleData.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sm mr-2"></i> Đang tạo 30 mẫu...`;
+
+  const denAuthorities = [
+    "Bộ Giáo dục và Đào tạo",
+    "Bộ Khoa học và Công nghệ",
+    "Bộ Tài chính",
+    "UBND Thành phố",
+    "Sở Giáo dục và Đào tạo",
+    "Đại học Quốc gia",
+    "Thành ủy",
+    "Bảo hiểm Xã hội Tỉnh"
+  ];
+
+  const diDepartments = [
+    "Phòng Hành chính - Tài vụ",
+    "Phòng Đào tạo - Khoa học và QLSV"
+  ];
+
+  const docTypes = [
+    "Quyết định",
+    "Thông báo",
+    "Tờ trình",
+    "Kế hoạch",
+    "Công văn",
+    "Báo cáo",
+    "Hướng dẫn"
+  ];
+
+  const sampleSummaries = [
+    "Về việc ban hành quy định đào tạo và chuẩn đầu ra ngoại ngữ cho sinh viên",
+    "Thông báo về kế hoạch tổ chức hội nghị khoa học sinh viên cấp Phân hiệu năm 2025",
+    "Tờ trình phê duyệt dự toán kinh phí mua sắm thiết bị công nghệ thông tin phục vụ giảng dạy",
+    "Về việc khen thưởng các cá nhân và tập thể có thành tích xuất sắc trong công tác tuyển sinh",
+    "Hướng dẫn thực hiện kê khai và quyết toán thuế thu nhập cá nhân năm 2024",
+    "Báo cáo tổng kết công tác quản lý sinh viên và đảm bảo an ninh trật tự học đường",
+    "Kế hoạch triển khai đợt thực tập tốt nghiệp và kiểm tra tay nghề cho sinh viên khóa cuối",
+    "Về việc tăng cường công tác phòng chống dịch bệnh và vệ sinh an toàn thực phẩm trong trường",
+    "Thông báo lịch nghỉ lễ và phân công trực ca bảo vệ tài sản cơ quan",
+    "Quyết định thành lập Hội đồng đánh giá luận văn thạc sĩ đợt 1 năm 2025"
+  ];
+
+  const driveLinks = [
+    "https://drive.google.com/file/d/1vA_sample_drive_link_01/view",
+    "https://drive.google.com/file/d/1vB_sample_drive_link_02/view",
+    "https://drive.google.com/file/d/1vC_sample_drive_link_03/view",
+    ""
+  ];
+
+  const congVanRef = ref(database, "cong_van");
+  let createdCount = 0;
+
+  try {
+    for (let i = 1; i <= 30; i++) {
+      const isDen = Math.random() > 0.4; // 60% Đến, 40% Đi
+      const loai_cong_van = isDen ? "Công văn Đến" : "Công văn Đi";
+
+      const unit = isDen
+        ? denAuthorities[Math.floor(Math.random() * denAuthorities.length)]
+        : diDepartments[Math.floor(Math.random() * diDepartments.length)];
+
+      const loai_van_ban = docTypes[Math.floor(Math.random() * docTypes.length)];
+      const trich_yeu = sampleSummaries[Math.floor(Math.random() * sampleSummaries.length)];
+      const drive_link = driveLinks[Math.floor(Math.random() * driveLinks.length)];
+
+      // Generate random date between Jan 2025 and Mar 2025
+      const randomDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, "0");
+      const randomMonth = String(Math.floor(Math.random() * 3) + 1).padStart(2, "0");
+      const ngay_ban_hanh = `2025-${randomMonth}-${randomDay}`;
+
+      const soNum = Math.floor(Math.random() * 300) + 1;
+      const so_ky_hieu = isDen ? `${soNum}/CV-${unit.substring(0, 3).toUpperCase()}` : `${soNum}/QĐ-PH`;
+
+      const record = {
+        so_ky_hieu,
+        loai_cong_van,
+        phong_ban: unit,
+        loai_van_ban,
+        ngay_ban_hanh,
+        trich_yeu: `${trich_yeu} (Mẫu #${i})`,
+        drive_link,
+        created_at: Date.now() - (30 - i) * 60000
+      };
+
+      const newRef = push(congVanRef);
+      await set(newRef, record);
+      createdCount++;
+    }
+
+    showNotification(`Đã tự động tạo thành công 30 công văn mẫu!`, "success");
+  } catch (err) {
+    console.error("Error generating sample data:", err);
+    showNotification("Lỗi khi tạo dữ liệu mẫu: " + err.message, "error");
+  } finally {
+    btnGenerateSampleData.disabled = false;
+    btnGenerateSampleData.innerHTML = `
+      <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+      <span>Tạo 30 dữ liệu mẫu</span>
+    `;
+  }
+}
+
+btnGenerateSampleData.addEventListener("click", generate30SampleData);
+
 // App Initialization
 document.addEventListener("DOMContentLoaded", () => {
+  setupNavigationTabs();
+  updateDynamicUnitField();
   setDefaultDate();
   initFirebaseListener();
 });
