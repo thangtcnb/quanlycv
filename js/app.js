@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, push, set, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -17,14 +17,25 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Default Built-in Accounts
-const BUILTIN_USERS = {
-  "quantri": { password: "quantri", role: "quantri" },
-  "vanthu": { password: "vanthu123", role: "vanthu" },
-  "quanly": { password: "qlcv", role: "quanly" }
-};
+// Seed default users if /users node in Firebase RTDB is empty
+async function ensureInitialUsersSeeded() {
+  try {
+    const usersRef = ref(database, "users");
+    const snapshot = await get(usersRef);
+    if (!snapshot.exists()) {
+      const initialUsers = {
+        "quantri": { password: "quantri", role: "quantri", created_at: Date.now() },
+        "vanthu": { password: "vanthu123", role: "vanthu", created_at: Date.now() },
+        "quanly": { password: "qlcv", role: "quanly", created_at: Date.now() }
+      };
+      await set(usersRef, initialUsers);
+    }
+  } catch (error) {
+    console.error("Error seeding initial users:", error);
+  }
+}
 
-// Dynamic users fetched from Firebase /users node
+// Dynamic users fetched from Firebase /users node (only accessible when role is 'quantri')
 let customUsers = {};
 
 // State Management
@@ -169,21 +180,32 @@ function setDefaultDate() {
   }
 }
 
-// Get User credentials object (Builtin + Custom)
-function getAllUsers() {
-  return { ...BUILTIN_USERS, ...customUsers };
-}
-
 // -------------------------------------------------------------
 // 1. AUTHENTICATION & ROLE PERMISSIONS LOGIC
 // -------------------------------------------------------------
-function checkAuthStatus() {
+async function checkAuthStatus() {
   const savedUser = sessionStorage.getItem("qlcv_user") || localStorage.getItem("qlcv_user");
-  const allUsers = getAllUsers();
+  let savedRole = sessionStorage.getItem("qlcv_role") || localStorage.getItem("qlcv_role");
 
-  if (savedUser && allUsers[savedUser]) {
+  if (savedUser) {
+    if (!savedRole) {
+      try {
+        const userSnap = await get(ref(database, `users/${savedUser}`));
+        if (userSnap.exists()) {
+          savedRole = userSnap.val().role || "vanthu";
+          sessionStorage.setItem("qlcv_role", savedRole);
+          localStorage.setItem("qlcv_role", savedRole);
+        } else {
+          logoutUser();
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching user role on checkAuthStatus:", err);
+      }
+    }
+
     currentUser = savedUser;
-    currentRole = allUsers[savedUser].role || savedUser;
+    currentRole = savedRole || "vanthu";
     currentUserDisplay.textContent = `${currentUser} (${getRoleBadgeText(currentRole)})`;
 
     loginScreen.classList.add("hidden");
@@ -192,10 +214,16 @@ function checkAuthStatus() {
 
     applyRolePermissions();
     initFirebaseListener();
-    initUsersListener();
+
+    if (currentRole === "quantri") {
+      initUsersListener();
+    } else {
+      customUsers = {};
+    }
   } else {
     currentUser = null;
     currentRole = null;
+    customUsers = {};
     loginScreen.classList.remove("hidden");
     mainAppScreen.classList.add("hidden");
     mainAppScreen.classList.remove("flex");
@@ -249,33 +277,61 @@ function applyRolePermissions() {
   renderDispatchList();
 }
 
-loginForm.addEventListener("submit", (e) => {
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const username = loginUsernameInput.value.trim();
   const password = loginPasswordInput.value.trim();
 
-  const allUsers = getAllUsers();
+  if (!username || !password) {
+    loginErrorText.textContent = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!";
+    loginErrorMsg.classList.remove("hidden");
+    return;
+  }
 
-  if (allUsers[username] && allUsers[username].password === password) {
-    loginErrorMsg.classList.add("hidden");
-    sessionStorage.setItem("qlcv_user", username);
-    localStorage.setItem("qlcv_user", username);
-    showNotification(`Đăng nhập thành công! Chào mừng ${username}`);
-    checkAuthStatus();
-  } else {
+  // Ensure initial default users are seeded on Firebase RTDB if empty
+  await ensureInitialUsersSeeded();
+
+  try {
+    const userSnap = await get(ref(database, `users/${username}`));
+    if (userSnap.exists()) {
+      const userData = userSnap.val();
+      if (userData && userData.password === password) {
+        loginErrorMsg.classList.add("hidden");
+        const role = userData.role || "vanthu";
+        sessionStorage.setItem("qlcv_user", username);
+        sessionStorage.setItem("qlcv_role", role);
+        localStorage.setItem("qlcv_user", username);
+        localStorage.setItem("qlcv_role", role);
+        showNotification(`Đăng nhập thành công! Chào mừng ${username}`);
+        await checkAuthStatus();
+        return;
+      }
+    }
+
     loginErrorText.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác!";
+    loginErrorMsg.classList.remove("hidden");
+  } catch (error) {
+    console.error("Login error:", error);
+    loginErrorText.textContent = "Lỗi khi kết nối hệ thống. Vui lòng thử lại!";
     loginErrorMsg.classList.remove("hidden");
   }
 });
 
-btnLogout.addEventListener("click", () => {
+function logoutUser() {
   sessionStorage.removeItem("qlcv_user");
+  sessionStorage.removeItem("qlcv_role");
   localStorage.removeItem("qlcv_user");
-  loginUsernameInput.value = "";
-  loginPasswordInput.value = "";
-  loginErrorMsg.classList.add("hidden");
-  showNotification("Đã đăng xuất khỏi hệ thống.", "info");
+  localStorage.removeItem("qlcv_role");
+  if (loginUsernameInput) loginUsernameInput.value = "";
+  if (loginPasswordInput) loginPasswordInput.value = "";
+  if (loginErrorMsg) loginErrorMsg.classList.add("hidden");
+  customUsers = {};
   checkAuthStatus();
+}
+
+btnLogout.addEventListener("click", () => {
+  logoutUser();
+  showNotification("Đã đăng xuất khỏi hệ thống.", "info");
 });
 
 // -------------------------------------------------------------
@@ -530,9 +586,10 @@ function initFirebaseListener() {
   });
 }
 
-// Listen to Realtime Database Users
+// Listen to Realtime Database Users (quantri ONLY)
 let isUsersListenerSet = false;
 function initUsersListener() {
+  if (currentRole !== "quantri") return;
   if (isUsersListenerSet) return;
   isUsersListenerSet = true;
 
@@ -543,11 +600,12 @@ function initUsersListener() {
     customUsers = {};
 
     if (data) {
-      Object.keys(data).forEach((id) => {
-        const u = data[id];
-        if (u.username) {
-          customUsers[u.username] = {
-            id,
+      Object.keys(data).forEach((key) => {
+        const u = data[key];
+        if (u) {
+          const username = u.username || key;
+          customUsers[username] = {
+            id: key,
             password: u.password,
             role: u.role || "vanthu"
           };
@@ -555,7 +613,9 @@ function initUsersListener() {
       });
     }
 
-    renderUserList();
+    if (currentRole === "quantri") {
+      renderUserList();
+    }
   }, (error) => {
     console.error("Firebase Users Listener Error:", error);
   });
@@ -988,17 +1048,15 @@ if (addUserForm) {
       return;
     }
 
-    const allUsers = getAllUsers();
-    if (allUsers[username]) {
-      showNotification(`Tên đăng nhập "${username}" đã tồn tại trên hệ thống!`, "error");
-      return;
-    }
-
     try {
-      const usersRef = ref(database, "users");
-      const newUserRef = push(usersRef);
-      await set(newUserRef, {
-        username,
+      const existingSnap = await get(ref(database, `users/${username}`));
+      if (existingSnap.exists() || customUsers[username]) {
+        showNotification(`Tên đăng nhập "${username}" đã tồn tại trên hệ thống!`, "error");
+        return;
+      }
+
+      const userRef = ref(database, `users/${username}`);
+      await set(userRef, {
         password,
         role,
         created_at: Date.now()
@@ -1014,40 +1072,29 @@ if (addUserForm) {
 }
 
 function renderUserList() {
-  if (!userTableBody) return;
+  if (!userTableBody || currentRole !== "quantri") return;
 
-  const builtinKeys = Object.keys(BUILTIN_USERS);
-  const customKeys = Object.keys(customUsers);
+  const userKeys = Object.keys(customUsers);
+
+  if (userKeys.length === 0) {
+    userTableBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="px-3 py-4 text-center text-slate-400">Chưa có dữ liệu tài khoản.</td>
+      </tr>
+    `;
+    return;
+  }
 
   let html = "";
   let index = 1;
 
-  // Render Built-in system accounts
-  builtinKeys.forEach(u => {
-    const acc = BUILTIN_USERS[u];
-    html += `
-      <tr class="border-b border-slate-100 hover:bg-slate-50">
-        <td class="px-3 py-2.5 text-center font-medium text-slate-500">${index++}</td>
-        <td class="px-3 py-2.5 font-bold text-slate-800">${escapeHtml(u)}</td>
-        <td class="px-3 py-2.5 text-slate-600 font-mono">••••••••</td>
-        <td class="px-3 py-2.5">
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800">
-            ${escapeHtml(getRoleBadgeText(acc.role))}
-          </span>
-        </td>
-        <td class="px-3 py-2.5 text-center text-slate-400 italic">Mặc định</td>
-      </tr>
-    `;
-  });
-
-  // Render Custom accounts created in Firebase
-  customKeys.forEach(u => {
+  userKeys.forEach(u => {
     const acc = customUsers[u];
     html += `
       <tr class="border-b border-slate-100 hover:bg-slate-50">
         <td class="px-3 py-2.5 text-center font-medium text-slate-500">${index++}</td>
         <td class="px-3 py-2.5 font-bold text-slate-800">${escapeHtml(u)}</td>
-        <td class="px-3 py-2.5 text-slate-600 font-mono">${escapeHtml(acc.password)}</td>
+        <td class="px-3 py-2.5 text-slate-600 font-mono">••••••••</td>
         <td class="px-3 py-2.5">
           <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800">
             ${escapeHtml(getRoleBadgeText(acc.role))}
