@@ -24,7 +24,7 @@ async function ensureInitialUsersSeeded() {
     const snapshot = await get(usersRef);
     if (!snapshot.exists()) {
       const initialUsers = {
-        "quantri": { password: "quantri", role: "quantri", created_at: Date.now() },
+        "quantri": { password: "quantri1", role: "quantri", created_at: Date.now() },
         "vanthu": { password: "vanthu123", role: "vanthu", created_at: Date.now() },
         "quanly": { password: "qlcv", role: "quanly", created_at: Date.now() }
       };
