@@ -11,6 +11,9 @@
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
+  <!-- SheetJS (XLSX) Library CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -102,6 +105,18 @@
 
           <!-- User Info & Logout -->
           <div class="flex items-center space-x-4">
+            <!-- Header Backup Buttons for quantri -->
+            <div id="headerBackupContainer" class="hidden flex items-center space-x-2">
+              <button id="headerBtnExportExcel" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow transition flex items-center space-x-1.5 cursor-pointer text-xs border border-emerald-500" title="Xuất dữ liệu Excel (.xlsx)">
+                <i class="fa-solid fa-file-excel"></i>
+                <span class="hidden sm:inline">Xuất Excel</span>
+              </button>
+              <button id="headerBtnExportJSON" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow transition flex items-center space-x-1.5 cursor-pointer text-xs border border-indigo-500" title="Xuất Backup JSON (.json)">
+                <i class="fa-solid fa-file-code"></i>
+                <span class="hidden sm:inline">Backup JSON</span>
+              </button>
+            </div>
+
             <div class="flex items-center space-x-2 px-3 py-1.5 bg-white/10 rounded-lg border border-white/20 text-xs sm:text-sm">
               <i class="fa-solid fa-user-circle text-amber-300 text-lg"></i>
               <span>Xin chào, <strong id="currentUserDisplay" class="text-amber-300">vanthu</strong></span>
@@ -490,6 +505,37 @@
 
       <!-- TAB 3: QUẢN LÝ USER (USER MANAGEMENT - quantri only) -->
       <div id="tabUsersContent" class="hidden space-y-8">
+
+        <!-- SAO LƯU DỮ LIỆU CARD (quantri only) -->
+        <section id="backupSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/80 pb-4">
+            <div class="flex items-center space-x-3">
+              <div class="p-3 bg-emerald-100 text-emerald-800 rounded-xl border border-emerald-200">
+                <i class="fa-solid fa-database text-2xl"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-slate-800">Sao Lưu Dữ Liệu Dự Phòng</h2>
+                <p class="text-xs text-slate-500">Tải về toàn bộ cơ sở dữ liệu công văn trên Firebase Realtime Database</p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <button id="btnExportExcel" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center space-x-2 cursor-pointer border border-emerald-500">
+                <i class="fa-solid fa-file-excel text-sm"></i>
+                <span>Xuất Excel (.xlsx)</span>
+              </button>
+              <button id="btnExportJSON" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center space-x-2 cursor-pointer border border-indigo-500">
+                <i class="fa-solid fa-file-code text-sm"></i>
+                <span>Xuất Backup JSON (.json)</span>
+              </button>
+            </div>
+          </div>
+          <div class="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200/80 flex items-center space-x-2">
+            <i class="fa-solid fa-circle-info text-blue-500 flex-shrink-0"></i>
+            <span>Dữ liệu xuất ra bao gồm đầy đủ các cột thông tin công văn: STT, Số/Ký hiệu, Phân loại, Loại VB, Đơn vị/Phòng ban, Ngày ban hành, Trích yếu nội dung, Link đính kèm và Ngày tạo.</span>
+          </div>
+        </section>
+
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 space-y-6">
           <div class="flex items-center space-x-3 border-b border-slate-200/80 pb-4">
             <i class="fa-solid fa-users-gear text-blue-600 text-2xl"></i>

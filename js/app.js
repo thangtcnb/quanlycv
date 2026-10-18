@@ -58,6 +58,14 @@ const tabUsersContent = document.getElementById("tabUsersContent");
 const formColumnContainer = document.getElementById("formColumnContainer");
 const tableColumnContainer = document.getElementById("tableColumnContainer");
 
+// DOM Elements - Backup & Export
+const headerBackupContainer = document.getElementById("headerBackupContainer");
+const backupSection = document.getElementById("backupSection");
+const btnExportExcel = document.getElementById("btnExportExcel");
+const btnExportJSON = document.getElementById("btnExportJSON");
+const headerBtnExportExcel = document.getElementById("headerBtnExportExcel");
+const headerBtnExportJSON = document.getElementById("headerBtnExportJSON");
+
 // DOM Elements - Form
 const form = document.getElementById("dispatchForm");
 const formTitle = document.getElementById("formTitle");
@@ -210,6 +218,9 @@ function applyRolePermissions() {
     }
     // Hide User Management tab
     if (tabUsersBtn) tabUsersBtn.classList.add("hidden");
+    // Hide Backup elements
+    if (headerBackupContainer) headerBackupContainer.classList.add("hidden");
+    if (backupSection) backupSection.classList.add("hidden");
   } else if (currentRole === "quantri") {
     // Show Form column
     if (formColumnContainer) formColumnContainer.classList.remove("hidden");
@@ -219,6 +230,9 @@ function applyRolePermissions() {
     }
     // Show User Management tab for quantri
     if (tabUsersBtn) tabUsersBtn.classList.remove("hidden");
+    // Show Backup elements for quantri
+    if (headerBackupContainer) headerBackupContainer.classList.remove("hidden");
+    if (backupSection) backupSection.classList.remove("hidden");
   } else {
     // Default vanthu role: Show Form column, Hide User Management tab
     if (formColumnContainer) formColumnContainer.classList.remove("hidden");
@@ -227,6 +241,9 @@ function applyRolePermissions() {
       tableColumnContainer.classList.add("lg:col-span-8");
     }
     if (tabUsersBtn) tabUsersBtn.classList.add("hidden");
+    // Hide Backup elements
+    if (headerBackupContainer) headerBackupContainer.classList.add("hidden");
+    if (backupSection) backupSection.classList.add("hidden");
   }
 
   renderDispatchList();
@@ -844,7 +861,119 @@ if (btnStatReset) {
 }
 
 // -------------------------------------------------------------
-// 5. USER MANAGEMENT LOGIC (ADMIN / quantri ONLY)
+// 5. BACKUP & EXPORT DATA LOGIC (quantri ONLY)
+// -------------------------------------------------------------
+function exportToExcel() {
+  if (currentRole !== "quantri") {
+    showNotification("Bạn không có quyền thực hiện chức năng này!", "error");
+    return;
+  }
+
+  if (!allDispatches || allDispatches.length === 0) {
+    showNotification("Không có dữ liệu công văn để xuất Excel!", "error");
+    return;
+  }
+
+  try {
+    if (typeof XLSX === "undefined") {
+      showNotification("Thư viện SheetJS chưa sẵn sàng!", "error");
+      return;
+    }
+
+    // Map dispatches to readable Vietnamese columns
+    const exportData = allDispatches.map((item, index) => {
+      let createdDateFormatted = "";
+      if (item.created_at) {
+        const d = new Date(item.created_at);
+        createdDateFormatted = d.toLocaleString("vi-VN");
+      }
+
+      return {
+        "STT": index + 1,
+        "Số / Ký hiệu": item.so_ky_hieu || "",
+        "Phân loại": item.loai_cong_van || "",
+        "Loại văn bản": item.loai_van_ban || "",
+        "Đơn vị / Phòng ban": item.phong_ban || "",
+        "Ngày ban hành": formatDate(item.ngay_ban_hanh),
+        "Trích yếu nội dung": item.trich_yeu || "",
+        "Link đính kèm (Drive)": item.drive_link || "",
+        "Thời gian tạo": createdDateFormatted
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Auto-fit column widths
+    const colWidths = [
+      { wch: 6 },  // STT
+      { wch: 20 }, // Số / Ký hiệu
+      { wch: 16 }, // Phân loại
+      { wch: 20 }, // Loại văn bản
+      { wch: 30 }, // Đơn vị / Phòng ban
+      { wch: 15 }, // Ngày ban hành
+      { wch: 50 }, // Trích yếu nội dung
+      { wch: 40 }, // Link đính kèm
+      { wch: 22 }  // Thời gian tạo
+    ];
+    worksheet["!cols"] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sach Cong van");
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const fileName = `Backup_CongVan_UFM_${todayStr}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+    showNotification(`Đã xuất file Excel "${fileName}" thành công!`);
+  } catch (error) {
+    console.error("Export Excel Error:", error);
+    showNotification("Lỗi khi xuất file Excel: " + error.message, "error");
+  }
+}
+
+function exportToJSON() {
+  if (currentRole !== "quantri") {
+    showNotification("Bạn không có quyền thực hiện chức năng này!", "error");
+    return;
+  }
+
+  if (!allDispatches || allDispatches.length === 0) {
+    showNotification("Không có dữ liệu công văn để xuất JSON!", "error");
+    return;
+  }
+
+  try {
+    // Structure standard Firebase RTDB dump format for cong_van
+    const jsonDump = {};
+    allDispatches.forEach(item => {
+      const { id, ...data } = item;
+      jsonDump[id] = data;
+    });
+
+    const jsonString = JSON.stringify(jsonDump, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const fileName = `Backup_CongVan_UFM_${todayStr}.json`;
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showNotification(`Đã xuất file Backup JSON "${fileName}" thành công!`);
+  } catch (error) {
+    console.error("Export JSON Error:", error);
+    showNotification("Lỗi khi xuất file JSON: " + error.message, "error");
+  }
+}
+
+// -------------------------------------------------------------
+// 6. USER MANAGEMENT LOGIC (ADMIN / quantri ONLY)
 // -------------------------------------------------------------
 if (addUserForm) {
   addUserForm.addEventListener("submit", async (e) => {
@@ -948,6 +1077,12 @@ window.deleteCustomUser = async function(id, username) {
     }
   }
 };
+
+// Bind Backup Click Events
+if (btnExportExcel) btnExportExcel.addEventListener("click", exportToExcel);
+if (btnExportJSON) btnExportJSON.addEventListener("click", exportToJSON);
+if (headerBtnExportExcel) headerBtnExportExcel.addEventListener("click", exportToExcel);
+if (headerBtnExportJSON) headerBtnExportJSON.addEventListener("click", exportToJSON);
 
 // -------------------------------------------------------------
 // APP INITIALIZATION

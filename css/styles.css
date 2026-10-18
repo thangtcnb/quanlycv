@@ -126,6 +126,14 @@ table {
   border-bottom: none;
 }
 
+/* Backup section enhancements */
+#backupSection {
+  transition: all 0.2s ease-in-out;
+}
+#headerBackupContainer button {
+  white-space: nowrap;
+}
+
 /* Print styling */
 @media print {
   .no-print {
