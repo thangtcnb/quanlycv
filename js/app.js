@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -16,6 +17,31 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+const auth = getAuth(app);
+
+// Secondary Firebase app instance for Admin user creation to avoid logging out active session
+const secondaryApp = initializeApp(firebaseConfig, "SecondaryAuthApp");
+const secondaryAuth = getAuth(secondaryApp);
+
+// Compatibility bridge for firebase.auth() helper
+window.firebase = window.firebase || {};
+window.firebase.auth = function() {
+  return {
+    signInWithEmailAndPassword: (email, password) => signInWithEmailAndPassword(auth, email, password),
+    signOut: () => signOut(auth),
+    onAuthStateChanged: (callback) => onAuthStateChanged(auth, callback),
+    createUserWithEmailAndPassword: (email, password) => createUserWithEmailAndPassword(secondaryAuth, email, password),
+    get currentUser() { return auth.currentUser; }
+  };
+};
+
+// Helper: Convert username to full email format if needed
+function formatEmail(usernameOrEmail) {
+  if (usernameOrEmail.includes("@")) {
+    return usernameOrEmail.toLowerCase();
+  }
+  return `${usernameOrEmail.toLowerCase()}@ufm.edu.vn`;
+}
 
 // Seed default users if /users node in Firebase RTDB is empty
 async function ensureInitialUsersSeeded() {
@@ -183,30 +209,32 @@ function setDefaultDate() {
 // -------------------------------------------------------------
 // 1. AUTHENTICATION & ROLE PERMISSIONS LOGIC
 // -------------------------------------------------------------
-async function checkAuthStatus() {
-  const savedUser = sessionStorage.getItem("qlcv_user") || localStorage.getItem("qlcv_user");
-  let savedRole = sessionStorage.getItem("qlcv_role") || localStorage.getItem("qlcv_role");
 
-  if (savedUser) {
-    if (!savedRole) {
-      try {
-        const userSnap = await get(ref(database, `users/${savedUser}`));
-        if (userSnap.exists()) {
-          savedRole = userSnap.val().role || "vanthu";
-          sessionStorage.setItem("qlcv_role", savedRole);
-          localStorage.setItem("qlcv_role", savedRole);
-        } else {
-          logoutUser();
-          return;
-        }
-      } catch (err) {
-        console.error("Error fetching user role on checkAuthStatus:", err);
+// Listen to Firebase Auth state changes
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (user) {
+    // Extract username from email or display name
+    let username = user.email ? user.email.split("@")[0] : "user";
+    let role = "vanthu";
+
+    try {
+      const userSnap = await get(ref(database, `users/${username}`));
+      if (userSnap.exists()) {
+        role = userSnap.val().role || "vanthu";
       }
+    } catch (err) {
+      console.error("Error fetching user role from RTDB:", err);
     }
 
-    currentUser = savedUser;
-    currentRole = savedRole || "vanthu";
-    currentUserDisplay.textContent = `${currentUser} (${getRoleBadgeText(currentRole)})`;
+    currentUser = username;
+    currentRole = role;
+
+    sessionStorage.setItem("qlcv_user", currentUser);
+    sessionStorage.setItem("qlcv_role", currentRole);
+
+    if (currentUserDisplay) {
+      currentUserDisplay.textContent = `${currentUser} (${getRoleBadgeText(currentRole)})`;
+    }
 
     loginScreen.classList.add("hidden");
     mainAppScreen.classList.remove("hidden");
@@ -221,14 +249,26 @@ async function checkAuthStatus() {
       customUsers = {};
     }
   } else {
+    // Signed out: Clear session & memory state
     currentUser = null;
     currentRole = null;
     customUsers = {};
+    allDispatches = [];
+
+    sessionStorage.removeItem("qlcv_user");
+    sessionStorage.removeItem("qlcv_role");
+    localStorage.removeItem("qlcv_user");
+    localStorage.removeItem("qlcv_role");
+
+    if (loginUsernameInput) loginUsernameInput.value = "";
+    if (loginPasswordInput) loginPasswordInput.value = "";
+    if (loginErrorMsg) loginErrorMsg.classList.add("hidden");
+
     loginScreen.classList.remove("hidden");
     mainAppScreen.classList.add("hidden");
     mainAppScreen.classList.remove("flex");
   }
-}
+});
 
 function getRoleBadgeText(role) {
   if (role === "quantri") return "Quản trị";
@@ -279,10 +319,10 @@ function applyRolePermissions() {
 
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const username = loginUsernameInput.value.trim();
+  const usernameInput = loginUsernameInput.value.trim();
   const password = loginPasswordInput.value.trim();
 
-  if (!username || !password) {
+  if (!usernameInput || !password) {
     loginErrorText.textContent = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!";
     loginErrorMsg.classList.remove("hidden");
     return;
@@ -291,47 +331,50 @@ loginForm.addEventListener("submit", async (e) => {
   // Ensure initial default users are seeded on Firebase RTDB if empty
   await ensureInitialUsersSeeded();
 
+  const email = formatEmail(usernameInput);
+
   try {
-    const userSnap = await get(ref(database, `users/${username}`));
-    if (userSnap.exists()) {
-      const userData = userSnap.val();
-      if (userData && userData.password === password) {
-        loginErrorMsg.classList.add("hidden");
-        const role = userData.role || "vanthu";
-        sessionStorage.setItem("qlcv_user", username);
-        sessionStorage.setItem("qlcv_role", role);
-        localStorage.setItem("qlcv_user", username);
-        localStorage.setItem("qlcv_role", role);
-        showNotification(`Đăng nhập thành công! Chào mừng ${username}`);
-        await checkAuthStatus();
-        return;
+    // Perform authentication using official Firebase Auth method
+    await firebase.auth().signInWithEmailAndPassword(email, password);
+    loginErrorMsg.classList.add("hidden");
+    showNotification(`Đăng nhập thành công! Chào mừng ${usernameInput}`);
+  } catch (authError) {
+    console.warn("Firebase Auth Login failed, checking RTDB fallback setup...", authError);
+
+    // Fallback logic for existing RTDB user credentials to auto-register in Firebase Auth if needed
+    try {
+      const usernameKey = usernameInput.toLowerCase();
+      const userSnap = await get(ref(database, `users/${usernameKey}`));
+      if (userSnap.exists()) {
+        const userData = userSnap.val();
+        if (userData && userData.password === password) {
+          // Auto-register default/seeded account into Firebase Auth and sign in
+          await createUserWithEmailAndPassword(auth, email, password);
+          loginErrorMsg.classList.add("hidden");
+          showNotification(`Đăng nhập thành công! Chào mừng ${usernameInput}`);
+          return;
+        }
       }
+    } catch (rtdbErr) {
+      console.error("RTDB Fallback error:", rtdbErr);
     }
 
     loginErrorText.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác!";
     loginErrorMsg.classList.remove("hidden");
-  } catch (error) {
-    console.error("Login error:", error);
-    loginErrorText.textContent = "Lỗi khi kết nối hệ thống. Vui lòng thử lại!";
-    loginErrorMsg.classList.remove("hidden");
   }
 });
 
-function logoutUser() {
-  sessionStorage.removeItem("qlcv_user");
-  sessionStorage.removeItem("qlcv_role");
-  localStorage.removeItem("qlcv_user");
-  localStorage.removeItem("qlcv_role");
-  if (loginUsernameInput) loginUsernameInput.value = "";
-  if (loginPasswordInput) loginPasswordInput.value = "";
-  if (loginErrorMsg) loginErrorMsg.classList.add("hidden");
-  customUsers = {};
-  checkAuthStatus();
+async function logoutUser() {
+  try {
+    await firebase.auth().signOut();
+    showNotification("Đã đăng xuất khỏi hệ thống.", "info");
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
 }
 
 btnLogout.addEventListener("click", () => {
   logoutUser();
-  showNotification("Đã đăng xuất khỏi hệ thống.", "info");
 });
 
 // -------------------------------------------------------------
@@ -1049,13 +1092,22 @@ if (addUserForm) {
     }
 
     try {
-      const existingSnap = await get(ref(database, `users/${username}`));
-      if (existingSnap.exists() || customUsers[username]) {
+      const existingSnap = await get(ref(database, `users/${username.toLowerCase()}`));
+      if (existingSnap.exists() || customUsers[username.toLowerCase()]) {
         showNotification(`Tên đăng nhập "${username}" đã tồn tại trên hệ thống!`, "error");
         return;
       }
 
-      const userRef = ref(database, `users/${username}`);
+      // Create Firebase Auth user using Firebase Auth service
+      const email = formatEmail(username);
+      try {
+        await firebase.auth().createUserWithEmailAndPassword(email, password);
+      } catch (authErr) {
+        console.warn("Auth user creation warning (might already exist):", authErr);
+      }
+
+      // Save user metadata to Firebase RTDB /users node
+      const userRef = ref(database, `users/${username.toLowerCase()}`);
       await set(userRef, {
         password,
         role,
@@ -1139,5 +1191,4 @@ document.addEventListener("DOMContentLoaded", () => {
   updateDynamicUnitField();
   updateStatDeptFilterVisibility();
   setDefaultDate();
-  checkAuthStatus();
 });
