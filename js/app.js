@@ -35,9 +35,6 @@ let currentEditId = null;
 let currentPage = 1;
 const ITEMS_PER_PAGE = 20;
 
-let deptChartInstance = null;
-let typeChartInstance = null;
-
 // DOM Elements - Auth & Screens
 const loginScreen = document.getElementById("loginScreen");
 const mainAppScreen = document.getElementById("mainAppScreen");
@@ -771,34 +768,7 @@ function runStatistics() {
   if (statDen) statDen.textContent = denCount;
   if (statDi) statDi.textContent = diCount;
 
-  // Breakdown calculations
-  const unitCounts = {};
-  filtered.forEach(item => {
-    const unitName = (item.phong_ban || "Chưa rõ").trim();
-    if (!unitCounts[unitName]) {
-      unitCounts[unitName] = { total: 0, den: 0, di: 0 };
-    }
-    unitCounts[unitName].total++;
-    if (item.loai_cong_van === "Công văn Đến") unitCounts[unitName].den++;
-    if (item.loai_cong_van === "Công văn Đi") unitCounts[unitName].di++;
-  });
-
-  const typeCounts = {};
-  filtered.forEach(item => {
-    const typeName = (item.loai_van_ban || "Chưa phân loại").trim();
-    if (!typeCounts[typeName]) {
-      typeCounts[typeName] = { total: 0, den: 0, di: 0 };
-    }
-    typeCounts[typeName].total++;
-    if (item.loai_cong_van === "Công văn Đến") typeCounts[typeName].den++;
-    if (item.loai_cong_van === "Công văn Đi") typeCounts[typeName].di++;
-  });
-
-  renderDeptTable(unitCounts);
-  renderTypeTable(typeCounts);
-  renderCharts(unitCounts, typeCounts);
-
-  // Bổ sung Bảng chi tiết công văn thỏa điều kiện lọc trong Tab Thống kê
+  // Render Bảng chi tiết công văn thỏa điều kiện lọc trong Tab Thống kê
   renderStatDetailTable(filtered);
 }
 
@@ -839,8 +809,8 @@ function renderStatDetailTable(filteredItems) {
         <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
         <td class="px-3 py-2.5 text-slate-700">${escapeHtml(item.phong_ban)}</td>
         <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDate(item.ngay_ban_hanh)}</td>
-        <td class="px-3 py-2.5 text-slate-800">
-          <div class="line-clamp-2" title="${escapeHtml(item.trich_yeu)}">
+        <td class="px-3 py-2.5 text-slate-800 leading-relaxed">
+          <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
             ${escapeHtml(item.trich_yeu)}
           </div>
         </td>
@@ -858,145 +828,6 @@ function renderStatDetailTable(filteredItems) {
       </tr>
     `;
   }).join("");
-}
-
-function renderDeptTable(unitCounts) {
-  const container = document.getElementById("statDeptTableBody");
-  if (!container) return;
-
-  const units = Object.keys(unitCounts).sort((a, b) => unitCounts[b].total - unitCounts[a].total);
-
-  if (units.length === 0) {
-    container.innerHTML = `
-      <tr>
-        <td colspan="4" class="px-3 py-6 text-center text-slate-400 text-xs">
-          Không có dữ liệu trong khoảng thời gian và điều kiện lọc đã chọn.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  const rows = units.map(u => {
-    const data = unitCounts[u];
-    return `
-      <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
-        <td class="px-3 py-2 font-medium text-slate-800">${escapeHtml(u)}</td>
-        <td class="px-3 py-2 text-center font-bold text-blue-600">${data.total}</td>
-        <td class="px-3 py-2 text-center text-emerald-600">${data.den}</td>
-        <td class="px-3 py-2 text-center text-purple-600">${data.di}</td>
-      </tr>
-    `;
-  });
-
-  container.innerHTML = rows.join("");
-}
-
-function renderTypeTable(typeCounts) {
-  const container = document.getElementById("statTypeTableBody");
-  if (!container) return;
-
-  const types = Object.keys(typeCounts).sort((a, b) => typeCounts[b].total - typeCounts[a].total);
-
-  if (types.length === 0) {
-    container.innerHTML = `
-      <tr>
-        <td colspan="4" class="px-3 py-6 text-center text-slate-400 text-xs">
-          Không có dữ liệu loại văn bản.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  const rows = types.map(t => {
-    const data = typeCounts[t];
-    return `
-      <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
-        <td class="px-3 py-2 font-medium text-slate-800">${escapeHtml(t)}</td>
-        <td class="px-3 py-2 text-center font-bold text-blue-600">${data.total}</td>
-        <td class="px-3 py-2 text-center text-emerald-600">${data.den}</td>
-        <td class="px-3 py-2 text-center text-purple-600">${data.di}</td>
-      </tr>
-    `;
-  });
-
-  container.innerHTML = rows.join("");
-}
-
-function renderCharts(unitCounts, typeCounts) {
-  if (typeof Chart === "undefined") return;
-
-  const deptCtx = document.getElementById("deptChart");
-  if (deptCtx) {
-    if (deptChartInstance) deptChartInstance.destroy();
-
-    const labels = Object.keys(unitCounts);
-    const denData = labels.map(l => unitCounts[l].den);
-    const diData = labels.map(l => unitCounts[l].di);
-
-    deptChartInstance = new Chart(deptCtx, {
-      type: 'bar',
-      data: {
-        labels: labels.map(l => l.length > 18 ? l.substring(0, 18) + "..." : l),
-        datasets: [
-          {
-            label: 'Công văn Đến',
-            data: denData,
-            backgroundColor: '#3b82f6',
-            borderRadius: 6
-          },
-          {
-            label: 'Công văn Đi',
-            data: diData,
-            backgroundColor: '#a855f7',
-            borderRadius: 6
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
-        },
-        scales: {
-          y: { beginAtZero: true, ticks: { precision: 0 } }
-        }
-      }
-    });
-  }
-
-  const typeCtx = document.getElementById("typeChart");
-  if (typeCtx) {
-    if (typeChartInstance) typeChartInstance.destroy();
-
-    const typeLabels = Object.keys(typeCounts);
-    const typeTotals = typeLabels.map(t => typeCounts[t].total);
-
-    const bgColors = [
-      '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
-      '#14b8a6', '#f97316', '#6366f1', '#06b6d4', '#84cc16'
-    ];
-
-    typeChartInstance = new Chart(typeCtx, {
-      type: 'doughnut',
-      data: {
-        labels: typeLabels,
-        datasets: [{
-          data: typeTotals,
-          backgroundColor: bgColors.slice(0, typeLabels.length)
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
-        }
-      }
-    });
-  }
 }
 
 if (btnStatFilter) btnStatFilter.addEventListener("click", runStatistics);

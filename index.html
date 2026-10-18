@@ -11,9 +11,6 @@
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <!-- Custom CSS -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -119,16 +116,16 @@
         </div>
 
         <!-- Navigation Tabs -->
-        <nav class="flex space-x-2 mt-6 border-b border-indigo-700/60 pb-0">
-          <button id="tabHomeBtn" class="nav-tab active px-5 py-2.5 font-semibold text-sm rounded-t-lg transition flex items-center space-x-2 border-b-2 border-amber-400 text-white bg-white/10">
+        <nav class="flex space-x-2 mt-6 border-b border-indigo-700/60 pb-0 overflow-x-auto whitespace-nowrap scrollbar-none">
+          <button id="tabHomeBtn" class="nav-tab active px-4 sm:px-5 py-2.5 font-semibold text-xs sm:text-sm rounded-t-lg transition flex items-center space-x-2 border-b-2 border-amber-400 text-white bg-white/10 flex-shrink-0">
             <i class="fa-solid fa-house text-amber-300"></i>
             <span>Trang chủ</span>
           </button>
-          <button id="tabStatsBtn" class="nav-tab px-5 py-2.5 font-semibold text-sm rounded-t-lg transition flex items-center space-x-2 text-indigo-200 hover:text-white hover:bg-white/5">
+          <button id="tabStatsBtn" class="nav-tab px-4 sm:px-5 py-2.5 font-semibold text-xs sm:text-sm rounded-t-lg transition flex items-center space-x-2 text-indigo-200 hover:text-white hover:bg-white/5 flex-shrink-0">
             <i class="fa-solid fa-chart-line text-indigo-300"></i>
             <span>Thống kê</span>
           </button>
-          <button id="tabUsersBtn" class="nav-tab hidden px-5 py-2.5 font-semibold text-sm rounded-t-lg transition flex items-center space-x-2 text-indigo-200 hover:text-white hover:bg-white/5">
+          <button id="tabUsersBtn" class="nav-tab hidden px-4 sm:px-5 py-2.5 font-semibold text-xs sm:text-sm rounded-t-lg transition flex items-center space-x-2 text-indigo-200 hover:text-white hover:bg-white/5 flex-shrink-0">
             <i class="fa-solid fa-users-gear text-indigo-300"></i>
             <span>Quản lý User</span>
           </button>
@@ -324,17 +321,17 @@
 
             <!-- Data Table with optimized column widths -->
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse table-auto min-w-[700px]">
+              <table class="w-full text-left border-collapse table-auto min-w-[950px]">
                 <thead>
                   <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold tracking-wider">
                     <th class="px-2.5 py-3 text-center w-[4%]">#</th>
-                    <th class="px-2.5 py-3 w-[15%]">Số / Ký hiệu</th>
-                    <th class="px-2.5 py-3 w-[12%]">Loại CV</th>
-                    <th class="px-2.5 py-3 w-[13%]">Loại VB</th>
-                    <th class="px-2.5 py-3 w-[18%]">Đơn vị / Phòng ban</th>
-                    <th class="px-2.5 py-3 w-[10%]">Ngày BH</th>
-                    <th class="px-2.5 py-3 w-[20%]">Trích yếu nội dung</th>
-                    <th class="px-2.5 py-3 text-center w-[8%]">File</th>
+                    <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
+                    <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
+                    <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
+                    <th class="px-2.5 py-3 w-[15%]">Đơn vị / Phòng ban</th>
+                    <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
+                    <th class="px-2.5 py-3 w-[34%]">Trích yếu nội dung</th>
+                    <th class="px-2.5 py-3 text-center w-[6%]">File</th>
                   </tr>
                 </thead>
                 <tbody id="dispatchTableBody" class="divide-y divide-slate-100">
@@ -453,63 +450,6 @@
             </div>
           </div>
 
-          <!-- Breakdown Tables & Charts -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
-
-            <!-- Unit / Dept Breakdown -->
-            <div class="bg-slate-50/50 border border-slate-200 p-5 rounded-xl space-y-4">
-              <h3 class="font-bold text-slate-800 text-sm flex items-center">
-                <i class="fa-solid fa-building-user text-blue-600 mr-2"></i>
-                Phân rã theo Nơi ban hành / Phòng ban
-              </h3>
-              <div class="overflow-x-auto bg-white rounded-lg border border-slate-200 max-h-56 scrollbar-thin">
-                <table class="w-full text-left border-collapse">
-                  <thead>
-                    <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold sticky top-0 z-10">
-                      <th class="px-3 py-2">Đơn vị / Phòng ban</th>
-                      <th class="px-3 py-2 text-center">Tổng</th>
-                      <th class="px-3 py-2 text-center">CV Đến</th>
-                      <th class="px-3 py-2 text-center">CV Đi</th>
-                    </tr>
-                  </thead>
-                  <tbody id="statDeptTableBody">
-                    <!-- JS populated -->
-                  </tbody>
-                </table>
-              </div>
-              <div class="h-64 pt-2">
-                <canvas id="deptChart"></canvas>
-              </div>
-            </div>
-
-            <!-- Document Type Breakdown -->
-            <div class="bg-slate-50/50 border border-slate-200 p-5 rounded-xl space-y-4">
-              <h3 class="font-bold text-slate-800 text-sm flex items-center">
-                <i class="fa-solid fa-tags text-blue-600 mr-2"></i>
-                Phân rã theo Từng Loại văn bản
-              </h3>
-              <div class="overflow-x-auto bg-white rounded-lg border border-slate-200 max-h-56 scrollbar-thin">
-                <table class="w-full text-left border-collapse">
-                  <thead>
-                    <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold sticky top-0 z-10">
-                      <th class="px-3 py-2">Loại văn bản</th>
-                      <th class="px-3 py-2 text-center">Tổng</th>
-                      <th class="px-3 py-2 text-center">CV Đến</th>
-                      <th class="px-3 py-2 text-center">CV Đi</th>
-                    </tr>
-                  </thead>
-                  <tbody id="statTypeTableBody">
-                    <!-- JS populated -->
-                  </tbody>
-                </table>
-              </div>
-              <div class="h-64 pt-2">
-                <canvas id="typeChart"></canvas>
-              </div>
-            </div>
-
-          </div>
-
           <!-- BẢNG CHI TIẾT CÔNG VĂN TRONG THỐNG KÊ -->
           <div class="pt-6 border-t border-slate-200/80 space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -523,17 +463,17 @@
             </div>
 
             <div class="overflow-x-auto bg-white rounded-xl border border-slate-200/80 shadow-sm">
-              <table class="w-full text-left border-collapse table-auto min-w-[800px]">
+              <table class="w-full text-left border-collapse table-auto min-w-[950px]">
                 <thead>
                   <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold tracking-wider border-b border-slate-200">
                     <th class="px-3 py-3 text-center w-[4%]">#</th>
-                    <th class="px-3 py-3 w-[15%]">Số / Ký hiệu</th>
-                    <th class="px-3 py-3 w-[12%]">Phân loại</th>
-                    <th class="px-3 py-3 w-[13%]">Loại VB</th>
-                    <th class="px-3 py-3 w-[20%]">Nơi ban hành / Phòng ban</th>
-                    <th class="px-3 py-3 w-[11%]">Ngày ban hành</th>
-                    <th class="px-3 py-3 w-[17%]">Trích yếu nội dung</th>
-                    <th class="px-3 py-3 text-center w-[8%]">Link Drive</th>
+                    <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
+                    <th class="px-3 py-3 w-[10%]">Phân loại</th>
+                    <th class="px-3 py-3 w-[10%]">Loại VB</th>
+                    <th class="px-3 py-3 w-[15%]">Nơi ban hành / Phòng ban</th>
+                    <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
+                    <th class="px-3 py-3 w-[34%]">Trích yếu nội dung</th>
+                    <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
                   </tr>
                 </thead>
                 <tbody id="statDetailTableBody" class="divide-y divide-slate-100 text-xs">
