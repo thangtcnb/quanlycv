@@ -17,14 +17,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Authentication Credentials
-const VALID_USERS = {
-  "vanthu": "vanthu123",
-  "quanly": "qlcv"
+// Default Built-in Accounts
+const BUILTIN_USERS = {
+  "quantri": { password: "quantri", role: "quantri" },
+  "vanthu": { password: "vanthu123", role: "vanthu" },
+  "quanly": { password: "qlcv", role: "quanly" }
 };
+
+// Dynamic users fetched from Firebase /users node
+let customUsers = {};
 
 // State Management
 let currentUser = null;
+let currentRole = null;
 let allDispatches = []; // Raw list from Firebase
 let currentEditId = null;
 let currentPage = 1;
@@ -44,11 +49,17 @@ const loginErrorText = document.getElementById("loginErrorText");
 const currentUserDisplay = document.getElementById("currentUserDisplay");
 const btnLogout = document.getElementById("btnLogout");
 
-// DOM Elements - Tabs
+// DOM Elements - Navigation Tabs
 const tabHomeBtn = document.getElementById("tabHomeBtn");
 const tabStatsBtn = document.getElementById("tabStatsBtn");
+const tabUsersBtn = document.getElementById("tabUsersBtn");
 const tabHomeContent = document.getElementById("tabHomeContent");
 const tabStatsContent = document.getElementById("tabStatsContent");
+const tabUsersContent = document.getElementById("tabUsersContent");
+
+// DOM Elements - Layout Containers
+const formColumnContainer = document.getElementById("formColumnContainer");
+const tableColumnContainer = document.getElementById("tableColumnContainer");
 
 // DOM Elements - Form
 const form = document.getElementById("dispatchForm");
@@ -87,6 +98,15 @@ const statDeptFilterContainer = document.getElementById("statDeptFilterContainer
 const statPhongBan = document.getElementById("statPhongBan");
 const btnStatFilter = document.getElementById("btnStatFilter");
 const btnStatReset = document.getElementById("btnStatReset");
+const statDetailTableBody = document.getElementById("statDetailTableBody");
+const statDetailBadge = document.getElementById("statDetailBadge");
+
+// DOM Elements - User Management
+const addUserForm = document.getElementById("addUserForm");
+const newUsernameInput = document.getElementById("newUsername");
+const newPasswordInput = document.getElementById("newPassword");
+const newUserRoleSelect = document.getElementById("newUserRole");
+const userTableBody = document.getElementById("userTableBody");
 
 // Toast Notification Function
 function showNotification(message, type = "success") {
@@ -138,30 +158,81 @@ function escapeHtml(str) {
 
 // Set Today default on date input
 function setDefaultDate() {
-  if (!ngayBanHanhInput.value) {
+  if (ngayBanHanhInput && !ngayBanHanhInput.value) {
     const today = new Date().toISOString().split("T")[0];
     ngayBanHanhInput.value = today;
   }
 }
 
+// Get User credentials object (Builtin + Custom)
+function getAllUsers() {
+  return { ...BUILTIN_USERS, ...customUsers };
+}
+
 // -------------------------------------------------------------
-// 1. AUTHENTICATION LOGIC
+// 1. AUTHENTICATION & ROLE PERMISSIONS LOGIC
 // -------------------------------------------------------------
 function checkAuthStatus() {
   const savedUser = sessionStorage.getItem("qlcv_user") || localStorage.getItem("qlcv_user");
-  if (savedUser && VALID_USERS[savedUser]) {
+  const allUsers = getAllUsers();
+
+  if (savedUser && allUsers[savedUser]) {
     currentUser = savedUser;
-    currentUserDisplay.textContent = currentUser;
+    currentRole = allUsers[savedUser].role || savedUser;
+    currentUserDisplay.textContent = `${currentUser} (${getRoleBadgeText(currentRole)})`;
+
     loginScreen.classList.add("hidden");
     mainAppScreen.classList.remove("hidden");
     mainAppScreen.classList.add("flex");
+
+    applyRolePermissions();
     initFirebaseListener();
+    initUsersListener();
   } else {
     currentUser = null;
+    currentRole = null;
     loginScreen.classList.remove("hidden");
     mainAppScreen.classList.add("hidden");
     mainAppScreen.classList.remove("flex");
   }
+}
+
+function getRoleBadgeText(role) {
+  if (role === "quantri") return "Quản trị";
+  if (role === "quanly") return "Quản lý";
+  return "Văn thư";
+}
+
+function applyRolePermissions() {
+  if (currentRole === "quanly") {
+    // Hide Form column, Expand list column to full width
+    if (formColumnContainer) formColumnContainer.classList.add("hidden");
+    if (tableColumnContainer) {
+      tableColumnContainer.classList.remove("lg:col-span-8");
+      tableColumnContainer.classList.add("lg:col-span-12");
+    }
+    // Hide User Management tab
+    if (tabUsersBtn) tabUsersBtn.classList.add("hidden");
+  } else if (currentRole === "quantri") {
+    // Show Form column
+    if (formColumnContainer) formColumnContainer.classList.remove("hidden");
+    if (tableColumnContainer) {
+      tableColumnContainer.classList.remove("lg:col-span-12");
+      tableColumnContainer.classList.add("lg:col-span-8");
+    }
+    // Show User Management tab for quantri
+    if (tabUsersBtn) tabUsersBtn.classList.remove("hidden");
+  } else {
+    // Default vanthu role: Show Form column, Hide User Management tab
+    if (formColumnContainer) formColumnContainer.classList.remove("hidden");
+    if (tableColumnContainer) {
+      tableColumnContainer.classList.remove("lg:col-span-12");
+      tableColumnContainer.classList.add("lg:col-span-8");
+    }
+    if (tabUsersBtn) tabUsersBtn.classList.add("hidden");
+  }
+
+  renderDispatchList();
 }
 
 loginForm.addEventListener("submit", (e) => {
@@ -169,7 +240,9 @@ loginForm.addEventListener("submit", (e) => {
   const username = loginUsernameInput.value.trim();
   const password = loginPasswordInput.value.trim();
 
-  if (VALID_USERS[username] && VALID_USERS[username] === password) {
+  const allUsers = getAllUsers();
+
+  if (allUsers[username] && allUsers[username].password === password) {
     loginErrorMsg.classList.add("hidden");
     sessionStorage.setItem("qlcv_user", username);
     localStorage.setItem("qlcv_user", username);
@@ -195,37 +268,54 @@ btnLogout.addEventListener("click", () => {
 // 2. NAVIGATION TABS
 // -------------------------------------------------------------
 function setupNavigationTabs() {
-  tabHomeBtn.addEventListener("click", () => {
-    tabHomeBtn.classList.add("active");
-    tabHomeBtn.classList.remove("text-indigo-200");
-    tabHomeBtn.classList.add("text-white", "bg-white/10");
+  function activateTab(activeBtn, contentToShow) {
+    [tabHomeBtn, tabStatsBtn, tabUsersBtn].forEach(btn => {
+      if (btn) {
+        btn.classList.remove("active", "text-white", "bg-white/10");
+        btn.classList.add("text-indigo-200");
+      }
+    });
 
-    tabStatsBtn.classList.remove("active", "text-white", "bg-white/10");
-    tabStatsBtn.classList.add("text-indigo-200");
+    [tabHomeContent, tabStatsContent, tabUsersContent].forEach(content => {
+      if (content) content.classList.add("hidden");
+    });
 
-    tabHomeContent.classList.remove("hidden");
-    tabStatsContent.classList.add("hidden");
-  });
+    if (activeBtn) {
+      activeBtn.classList.add("active", "text-white", "bg-white/10");
+      activeBtn.classList.remove("text-indigo-200");
+    }
 
-  tabStatsBtn.addEventListener("click", () => {
-    tabStatsBtn.classList.add("active");
-    tabStatsBtn.classList.remove("text-indigo-200");
-    tabStatsBtn.classList.add("text-white", "bg-white/10");
+    if (contentToShow) {
+      contentToShow.classList.remove("hidden");
+    }
+  }
 
-    tabHomeBtn.classList.remove("active", "text-white", "bg-white/10");
-    tabHomeBtn.classList.add("text-indigo-200");
+  if (tabHomeBtn) {
+    tabHomeBtn.addEventListener("click", () => {
+      activateTab(tabHomeBtn, tabHomeContent);
+    });
+  }
 
-    tabStatsContent.classList.remove("hidden");
-    tabHomeContent.classList.add("hidden");
+  if (tabStatsBtn) {
+    tabStatsBtn.addEventListener("click", () => {
+      activateTab(tabStatsBtn, tabStatsContent);
+      runStatistics();
+    });
+  }
 
-    runStatistics();
-  });
+  if (tabUsersBtn) {
+    tabUsersBtn.addEventListener("click", () => {
+      activateTab(tabUsersBtn, tabUsersContent);
+      renderUserList();
+    });
+  }
 }
 
 // -------------------------------------------------------------
 // 3. HOME TAB & DISPATCH FORM LOGIC
 // -------------------------------------------------------------
 function updateDynamicUnitField() {
+  if (!loaiCongVanInput) return;
   const isDen = loaiCongVanInput.value === "Công văn Đến";
 
   if (isDen) {
@@ -245,7 +335,9 @@ function updateDynamicUnitField() {
   }
 }
 
-loaiCongVanInput.addEventListener("change", updateDynamicUnitField);
+if (loaiCongVanInput) {
+  loaiCongVanInput.addEventListener("change", updateDynamicUnitField);
+}
 
 // Get Unit value according to document type
 function getUnitValue() {
@@ -257,62 +349,65 @@ function getUnitValue() {
 }
 
 // Form Submission Handler
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+if (form) {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  const so_ky_hieu = soKyHieuInput.value.trim();
-  const loai_cong_van = loaiCongVanInput.value;
-  const unitVal = getUnitValue();
-  const loai_van_ban = loaiVanBanInput.value.trim();
-  const ngay_ban_hanh = ngayBanHanhInput.value;
-  const trich_yeu = trichYeuInput.value.trim();
-  const drive_link = driveLinkInput.value.trim();
+    const so_ky_hieu = soKyHieuInput.value.trim();
+    const loai_cong_van = loaiCongVanInput.value;
+    const unitVal = getUnitValue();
+    const loai_van_ban = loaiVanBanInput.value.trim();
+    const ngay_ban_hanh = ngayBanHanhInput.value;
+    const trich_yeu = trichYeuInput.value.trim();
+    const drive_link = driveLinkInput.value.trim();
 
-  if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
-    showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
-    return;
-  }
-
-  const dispatchData = {
-    so_ky_hieu,
-    loai_cong_van,
-    phong_ban: unitVal,
-    loai_van_ban,
-    ngay_ban_hanh,
-    trich_yeu,
-    drive_link,
-    created_at: currentEditId ? (allDispatches.find(item => item.id === currentEditId)?.created_at || Date.now()) : Date.now()
-  };
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang lưu...`;
-
-  try {
-    if (currentEditId) {
-      const itemRef = ref(database, `cong_van/${currentEditId}`);
-      await update(itemRef, dispatchData);
-      showNotification("Cập nhật công văn thành công!");
-      resetForm();
-    } else {
-      const congVanRef = ref(database, "cong_van");
-      const newRef = push(congVanRef);
-      await set(newRef, dispatchData);
-      showNotification("Thêm công văn mới thành công!");
-      resetForm();
+    if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
+      showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
+      return;
     }
-  } catch (error) {
-    console.error("Save error:", error);
-    showNotification("Lỗi khi lưu công văn: " + error.message, "error");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = currentEditId
-      ? `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`
-      : `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
-  }
-});
+
+    const dispatchData = {
+      so_ky_hieu,
+      loai_cong_van,
+      phong_ban: unitVal,
+      loai_van_ban,
+      ngay_ban_hanh,
+      trich_yeu,
+      drive_link,
+      created_at: currentEditId ? (allDispatches.find(item => item.id === currentEditId)?.created_at || Date.now()) : Date.now()
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang lưu...`;
+
+    try {
+      if (currentEditId) {
+        const itemRef = ref(database, `cong_van/${currentEditId}`);
+        await update(itemRef, dispatchData);
+        showNotification("Cập nhật công văn thành công!");
+        resetForm();
+      } else {
+        const congVanRef = ref(database, "cong_van");
+        const newRef = push(congVanRef);
+        await set(newRef, dispatchData);
+        showNotification("Thêm công văn mới thành công!");
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      showNotification("Lỗi khi lưu công văn: " + error.message, "error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = currentEditId
+        ? `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`
+        : `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
+    }
+  });
+}
 
 // Reset Form State
 function resetForm() {
+  if (!form) return;
   form.reset();
   currentEditId = null;
   dispatchIdInput.value = "";
@@ -326,10 +421,12 @@ function resetForm() {
   setDefaultDate();
 }
 
-cancelEditBtn.addEventListener("click", () => {
-  resetForm();
-  showNotification("Đã hủy chế độ chỉnh sửa", "info");
-});
+if (cancelEditBtn) {
+  cancelEditBtn.addEventListener("click", () => {
+    resetForm();
+    showNotification("Đã hủy chế độ chỉnh sửa", "info");
+  });
+}
 
 // Populate Form for Editing
 window.editDispatch = function(id) {
@@ -382,7 +479,7 @@ window.deleteDispatch = async function(id) {
   }
 };
 
-// Listen to Realtime Database
+// Listen to Realtime Database Dispatches
 let isFirebaseListenerSet = false;
 function initFirebaseListener() {
   if (isFirebaseListenerSet) return;
@@ -403,7 +500,7 @@ function initFirebaseListener() {
       });
     }
 
-    // Sort newest first (by ngay_ban_hanh descending, then created_at descending)
+    // Sort newest first
     allDispatches.sort((a, b) => {
       if (b.ngay_ban_hanh !== a.ngay_ban_hanh) {
         return (b.ngay_ban_hanh || "").localeCompare(a.ngay_ban_hanh || "");
@@ -419,10 +516,41 @@ function initFirebaseListener() {
   });
 }
 
+// Listen to Realtime Database Users
+let isUsersListenerSet = false;
+function initUsersListener() {
+  if (isUsersListenerSet) return;
+  isUsersListenerSet = true;
+
+  const usersRef = ref(database, "users");
+
+  onValue(usersRef, (snapshot) => {
+    const data = snapshot.val();
+    customUsers = {};
+
+    if (data) {
+      Object.keys(data).forEach((id) => {
+        const u = data[id];
+        if (u.username) {
+          customUsers[u.username] = {
+            id,
+            password: u.password,
+            role: u.role || "vanthu"
+          };
+        }
+      });
+    }
+
+    renderUserList();
+  }, (error) => {
+    console.error("Firebase Users Listener Error:", error);
+  });
+}
+
 // Get Filtered Dispatches
 function getFilteredDispatches() {
-  const query = (searchInput.value || "").trim().toLowerCase();
-  const selectedLoai = filterLoaiCongVan.value;
+  const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+  const selectedLoai = filterLoaiCongVan ? filterLoaiCongVan.value : "";
 
   return allDispatches.filter((item) => {
     const matchSearch =
@@ -440,8 +568,11 @@ function getFilteredDispatches() {
 
 // Render Table with Pagination (Max 20 per page)
 function renderDispatchList() {
+  if (!dispatchTableBody) return;
   const filtered = getFilteredDispatches();
-  totalItemsBadge.textContent = `${filtered.length} / ${allDispatches.length} văn bản`;
+  if (totalItemsBadge) {
+    totalItemsBadge.textContent = `${filtered.length} / ${allDispatches.length} văn bản`;
+  }
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   if (currentPage > totalPages) {
@@ -461,8 +592,8 @@ function renderDispatchList() {
         </td>
       </tr>
     `;
-    paginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 văn bản";
-    paginationControls.innerHTML = "";
+    if (paginationInfo) paginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 văn bản";
+    if (paginationControls) paginationControls.innerHTML = "";
     return;
   }
 
@@ -474,6 +605,7 @@ function renderDispatchList() {
 
     const rowNum = startIndex + index + 1;
     const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
+    const canEdit = currentRole !== "quanly";
 
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
@@ -500,15 +632,17 @@ function renderDispatchList() {
           <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
             ${escapeHtml(item.trich_yeu)}
           </div>
-          <div class="mt-1 flex items-center space-x-2">
-            <button onclick="editDispatch('${item.id}')" class="text-amber-600 hover:text-amber-700 hover:underline text-[11px] font-medium inline-flex items-center">
-              <i class="fa-solid fa-pen-to-square mr-1"></i> Sửa
-            </button>
-            <span class="text-slate-300">|</span>
-            <button onclick="deleteDispatch('${item.id}')" class="text-rose-600 hover:text-rose-700 hover:underline text-[11px] font-medium inline-flex items-center">
-              <i class="fa-solid fa-trash-can mr-1"></i> Xóa
-            </button>
-          </div>
+          ${canEdit ? `
+            <div class="mt-1 flex items-center space-x-2">
+              <button onclick="editDispatch('${item.id}')" class="text-amber-600 hover:text-amber-700 hover:underline text-[11px] font-medium inline-flex items-center">
+                <i class="fa-solid fa-pen-to-square mr-1"></i> Sửa
+              </button>
+              <span class="text-slate-300">|</span>
+              <button onclick="deleteDispatch('${item.id}')" class="text-rose-600 hover:text-rose-700 hover:underline text-[11px] font-medium inline-flex items-center">
+                <i class="fa-solid fa-trash-can mr-1"></i> Xóa
+              </button>
+            </div>
+          ` : ""}
         </td>
         <td class="px-2.5 py-3 text-center whitespace-nowrap">
           ${hasDriveLink ? `
@@ -526,18 +660,18 @@ function renderDispatchList() {
     `;
   }).join("");
 
-  // Update Pagination Info
-  paginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filtered.length} văn bản`;
+  if (paginationInfo) {
+    paginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filtered.length} văn bản`;
+  }
 
-  // Render Pagination Buttons
   renderPaginationControls(totalPages);
 }
 
 // Pagination Controls Renderer
 function renderPaginationControls(totalPages) {
+  if (!paginationControls) return;
   let html = "";
 
-  // Prev Button
   const prevDisabled = currentPage === 1 ? "pagination-btn-disabled" : "";
   html += `
     <button onclick="goToPage(${currentPage - 1})" class="pagination-btn pagination-btn-default ${prevDisabled}" title="Trang trước">
@@ -545,7 +679,6 @@ function renderPaginationControls(totalPages) {
     </button>
   `;
 
-  // Page Numbers
   for (let page = 1; page <= totalPages; page++) {
     if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
       const activeClass = page === currentPage ? "pagination-btn-active" : "pagination-btn-default";
@@ -559,7 +692,6 @@ function renderPaginationControls(totalPages) {
     }
   }
 
-  // Next Button
   const nextDisabled = currentPage === totalPages ? "pagination-btn-disabled" : "";
   html += `
     <button onclick="goToPage(${currentPage + 1})" class="pagination-btn pagination-btn-default ${nextDisabled}" title="Trang sau">
@@ -575,53 +707,54 @@ window.goToPage = function(page) {
   renderDispatchList();
 };
 
-// Event Listeners for Filters
-searchInput.addEventListener("input", () => {
-  currentPage = 1;
-  renderDispatchList();
-});
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    currentPage = 1;
+    renderDispatchList();
+  });
+}
 
-filterLoaiCongVan.addEventListener("change", () => {
-  currentPage = 1;
-  renderDispatchList();
-});
+if (filterLoaiCongVan) {
+  filterLoaiCongVan.addEventListener("change", () => {
+    currentPage = 1;
+    renderDispatchList();
+  });
+}
 
 // -------------------------------------------------------------
-// 4. TAB THỐNG KÊ (ANALYTICS & ENHANCED FILTERS)
+// 4. TAB THỐNG KÊ & BẢNG CHI TIẾT CÔNG VĂN
 // -------------------------------------------------------------
 function updateStatDeptFilterVisibility() {
+  if (!statLoaiCongVan) return;
   if (statLoaiCongVan.value === "Công văn Đi") {
-    statDeptFilterContainer.classList.remove("hidden");
+    if (statDeptFilterContainer) statDeptFilterContainer.classList.remove("hidden");
   } else {
-    statDeptFilterContainer.classList.add("hidden");
-    statPhongBan.value = "Tất cả phòng ban";
+    if (statDeptFilterContainer) statDeptFilterContainer.classList.add("hidden");
+    if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
   }
 }
 
-statLoaiCongVan.addEventListener("change", updateStatDeptFilterVisibility);
+if (statLoaiCongVan) {
+  statLoaiCongVan.addEventListener("change", updateStatDeptFilterVisibility);
+}
 
 function runStatistics() {
-  const startDate = statStartDate.value;
-  const endDate = statEndDate.value;
-  const selectedLoai = statLoaiCongVan.value;
-  const selectedDept = statPhongBan.value;
+  const startDate = statStartDate ? statStartDate.value : "";
+  const endDate = statEndDate ? statEndDate.value : "";
+  const selectedLoai = statLoaiCongVan ? statLoaiCongVan.value : "Tất cả";
+  const selectedDept = statPhongBan ? statPhongBan.value : "Tất cả phòng ban";
 
   let filtered = [...allDispatches];
 
-  // 1. Date range filter
   if (startDate) {
     filtered = filtered.filter(item => item.ngay_ban_hanh >= startDate);
   }
   if (endDate) {
     filtered = filtered.filter(item => item.ngay_ban_hanh <= endDate);
   }
-
-  // 2. Document type filter ("Tất cả", "Công văn Đến", "Công văn Đi")
   if (selectedLoai !== "Tất cả") {
     filtered = filtered.filter(item => item.loai_cong_van === selectedLoai);
   }
-
-  // 3. Department filter for "Công văn Đi"
   if (selectedLoai === "Công văn Đi" && selectedDept !== "Tất cả phòng ban") {
     filtered = filtered.filter(item => item.phong_ban === selectedDept);
   }
@@ -630,13 +763,16 @@ function runStatistics() {
   const denCount = filtered.filter(i => i.loai_cong_van === "Công văn Đến").length;
   const diCount = filtered.filter(i => i.loai_cong_van === "Công văn Đi").length;
 
-  document.getElementById("statTotalCount").textContent = totalCount;
-  document.getElementById("statDenCount").textContent = denCount;
-  document.getElementById("statDiCount").textContent = diCount;
+  const statTotal = document.getElementById("statTotalCount");
+  const statDen = document.getElementById("statDenCount");
+  const statDi = document.getElementById("statDiCount");
 
-  // Breakdown by Units/Departments
+  if (statTotal) statTotal.textContent = totalCount;
+  if (statDen) statDen.textContent = denCount;
+  if (statDi) statDi.textContent = diCount;
+
+  // Breakdown calculations
   const unitCounts = {};
-
   filtered.forEach(item => {
     const unitName = (item.phong_ban || "Chưa rõ").trim();
     if (!unitCounts[unitName]) {
@@ -647,9 +783,7 @@ function runStatistics() {
     if (item.loai_cong_van === "Công văn Đi") unitCounts[unitName].di++;
   });
 
-  // Breakdown by Document Types
   const typeCounts = {};
-
   filtered.forEach(item => {
     const typeName = (item.loai_van_ban || "Chưa phân loại").trim();
     if (!typeCounts[typeName]) {
@@ -663,6 +797,67 @@ function runStatistics() {
   renderDeptTable(unitCounts);
   renderTypeTable(typeCounts);
   renderCharts(unitCounts, typeCounts);
+
+  // Bổ sung Bảng chi tiết công văn thỏa điều kiện lọc trong Tab Thống kê
+  renderStatDetailTable(filtered);
+}
+
+function renderStatDetailTable(filteredItems) {
+  if (!statDetailTableBody) return;
+
+  if (statDetailBadge) {
+    statDetailBadge.textContent = `${filteredItems.length} kết quả`;
+  }
+
+  if (filteredItems.length === 0) {
+    statDetailTableBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+          Không có công văn nào phù hợp với bộ lọc thống kê.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  statDetailTableBody.innerHTML = filteredItems.map((item, index) => {
+    const isDen = item.loai_cong_van === "Công văn Đến";
+    const badgeClass = isDen
+      ? "bg-blue-100 text-blue-800 border-blue-200"
+      : "bg-purple-100 text-purple-800 border-purple-200";
+    const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+        <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${index + 1}</td>
+        <td class="px-3 py-2.5 font-semibold text-slate-900">${escapeHtml(item.so_ky_hieu)}</td>
+        <td class="px-3 py-2.5">
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${badgeClass}">
+            ${escapeHtml(item.loai_cong_van)}
+          </span>
+        </td>
+        <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
+        <td class="px-3 py-2.5 text-slate-700">${escapeHtml(item.phong_ban)}</td>
+        <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDate(item.ngay_ban_hanh)}</td>
+        <td class="px-3 py-2.5 text-slate-800">
+          <div class="line-clamp-2" title="${escapeHtml(item.trich_yeu)}">
+            ${escapeHtml(item.trich_yeu)}
+          </div>
+        </td>
+        <td class="px-3 py-2.5 text-center whitespace-nowrap">
+          ${hasDriveLink ? `
+            <a href="${escapeHtml(item.drive_link)}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[11px] font-medium transition">
+              <i class="fa-brands fa-google-drive text-emerald-600 mr-1 text-xs"></i>
+              Xem
+            </a>
+          ` : `
+            <span class="text-slate-300 italic">Không</span>
+          `}
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderDeptTable(unitCounts) {
@@ -732,7 +927,6 @@ function renderTypeTable(typeCounts) {
 function renderCharts(unitCounts, typeCounts) {
   if (typeof Chart === "undefined") return;
 
-  // 1. Department / Unit Chart
   const deptCtx = document.getElementById("deptChart");
   if (deptCtx) {
     if (deptChartInstance) deptChartInstance.destroy();
@@ -773,7 +967,6 @@ function renderCharts(unitCounts, typeCounts) {
     });
   }
 
-  // 2. Type Chart
   const typeCtx = document.getElementById("typeChart");
   if (typeCtx) {
     if (typeChartInstance) typeChartInstance.destroy();
@@ -806,17 +999,124 @@ function renderCharts(unitCounts, typeCounts) {
   }
 }
 
-// Statistics Event Handlers
-btnStatFilter.addEventListener("click", runStatistics);
-btnStatReset.addEventListener("click", () => {
-  statStartDate.value = "";
-  statEndDate.value = "";
-  statLoaiCongVan.value = "Tất cả";
-  statPhongBan.value = "Tất cả phòng ban";
-  updateStatDeptFilterVisibility();
-  runStatistics();
-  showNotification("Đã đặt lại bộ lọc thống kê", "info");
-});
+if (btnStatFilter) btnStatFilter.addEventListener("click", runStatistics);
+if (btnStatReset) {
+  btnStatReset.addEventListener("click", () => {
+    if (statStartDate) statStartDate.value = "";
+    if (statEndDate) statEndDate.value = "";
+    if (statLoaiCongVan) statLoaiCongVan.value = "Tất cả";
+    if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
+    updateStatDeptFilterVisibility();
+    runStatistics();
+    showNotification("Đã đặt lại bộ lọc thống kê", "info");
+  });
+}
+
+// -------------------------------------------------------------
+// 5. USER MANAGEMENT LOGIC (ADMIN / quantri ONLY)
+// -------------------------------------------------------------
+if (addUserForm) {
+  addUserForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const username = newUsernameInput.value.trim();
+    const password = newPasswordInput.value.trim();
+    const role = newUserRoleSelect.value;
+
+    if (!username || !password || !role) {
+      showNotification("Vui lòng điền đầy đủ tên đăng nhập, mật khẩu và vai trò!", "error");
+      return;
+    }
+
+    const allUsers = getAllUsers();
+    if (allUsers[username]) {
+      showNotification(`Tên đăng nhập "${username}" đã tồn tại trên hệ thống!`, "error");
+      return;
+    }
+
+    try {
+      const usersRef = ref(database, "users");
+      const newUserRef = push(usersRef);
+      await set(newUserRef, {
+        username,
+        password,
+        role,
+        created_at: Date.now()
+      });
+
+      showNotification(`Đã tạo tài khoản "${username}" thành công!`);
+      addUserForm.reset();
+    } catch (error) {
+      console.error("Add user error:", error);
+      showNotification("Lỗi khi tạo user: " + error.message, "error");
+    }
+  });
+}
+
+function renderUserList() {
+  if (!userTableBody) return;
+
+  const builtinKeys = Object.keys(BUILTIN_USERS);
+  const customKeys = Object.keys(customUsers);
+
+  let html = "";
+  let index = 1;
+
+  // Render Built-in system accounts
+  builtinKeys.forEach(u => {
+    const acc = BUILTIN_USERS[u];
+    html += `
+      <tr class="border-b border-slate-100 hover:bg-slate-50">
+        <td class="px-3 py-2.5 text-center font-medium text-slate-500">${index++}</td>
+        <td class="px-3 py-2.5 font-bold text-slate-800">${escapeHtml(u)}</td>
+        <td class="px-3 py-2.5 text-slate-600 font-mono">••••••••</td>
+        <td class="px-3 py-2.5">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800">
+            ${escapeHtml(getRoleBadgeText(acc.role))}
+          </span>
+        </td>
+        <td class="px-3 py-2.5 text-center text-slate-400 italic">Mặc định</td>
+      </tr>
+    `;
+  });
+
+  // Render Custom accounts created in Firebase
+  customKeys.forEach(u => {
+    const acc = customUsers[u];
+    html += `
+      <tr class="border-b border-slate-100 hover:bg-slate-50">
+        <td class="px-3 py-2.5 text-center font-medium text-slate-500">${index++}</td>
+        <td class="px-3 py-2.5 font-bold text-slate-800">${escapeHtml(u)}</td>
+        <td class="px-3 py-2.5 text-slate-600 font-mono">${escapeHtml(acc.password)}</td>
+        <td class="px-3 py-2.5">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800">
+            ${escapeHtml(getRoleBadgeText(acc.role))}
+          </span>
+        </td>
+        <td class="px-3 py-2.5 text-center">
+          <button onclick="deleteCustomUser('${acc.id}', '${escapeHtml(u)}')" class="text-rose-600 hover:text-rose-800 font-semibold text-xs inline-flex items-center">
+            <i class="fa-solid fa-trash-can mr-1"></i> Xóa
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  userTableBody.innerHTML = html;
+}
+
+window.deleteCustomUser = async function(id, username) {
+  if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}"?`)) {
+    try {
+      const userRef = ref(database, `users/${id}`);
+      await remove(userRef);
+      showNotification(`Đã xóa tài khoản "${username}" thành công!`);
+    } catch (error) {
+      console.error("Delete user error:", error);
+      showNotification("Lỗi khi xóa tài khoản: " + error.message, "error");
+    }
+  }
+};
 
 // -------------------------------------------------------------
 // APP INITIALIZATION

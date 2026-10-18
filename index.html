@@ -77,7 +77,8 @@
         <!-- Account Info Guidance -->
         <div class="pt-4 border-t border-slate-200/80 text-center">
           <p class="text-[11px] text-slate-500 font-medium mb-1">Gợi ý tài khoản hệ thống:</p>
-          <div class="flex items-center justify-center space-x-3 text-[11px] text-slate-600">
+          <div class="flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-600">
+            <span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">quantri / quantri</span>
             <span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">vanthu / vanthu123</span>
             <span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">quanly / qlcv</span>
           </div>
@@ -127,6 +128,10 @@
             <i class="fa-solid fa-chart-line text-indigo-300"></i>
             <span>Thống kê</span>
           </button>
+          <button id="tabUsersBtn" class="nav-tab hidden px-5 py-2.5 font-semibold text-sm rounded-t-lg transition flex items-center space-x-2 text-indigo-200 hover:text-white hover:bg-white/5">
+            <i class="fa-solid fa-users-gear text-indigo-300"></i>
+            <span>Quản lý User</span>
+          </button>
         </nav>
       </div>
     </header>
@@ -138,7 +143,7 @@
       <div id="tabHomeContent" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
         <!-- CỘT BÊN TRÁI: Form Nhập Công Văn Mới (lg:col-span-4) -->
-        <div class="lg:col-span-4">
+        <div id="formColumnContainer" class="lg:col-span-4">
           <section id="formSection" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden sticky top-6">
             <div class="px-6 py-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
               <div class="flex items-center space-x-2">
@@ -281,7 +286,7 @@
         </div>
 
         <!-- CỘT BÊN PHẢI: Danh Sách Công Văn & Phân Trang (lg:col-span-8) -->
-        <div class="lg:col-span-8 space-y-4">
+        <div id="tableColumnContainer" class="lg:col-span-8 space-y-4">
           <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
             <div class="p-5 border-b border-slate-200/80 space-y-3">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -503,6 +508,129 @@
               </div>
             </div>
 
+          </div>
+
+          <!-- BẢNG CHI TIẾT CÔNG VĂN TRONG THỐNG KÊ -->
+          <div class="pt-6 border-t border-slate-200/80 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-table-list text-blue-600 text-lg"></i>
+                <h3 class="text-base font-bold text-slate-800">Danh Sách Chi Tiết Công Văn Thỏa Điều Kiện Filter</h3>
+              </div>
+              <span id="statDetailBadge" class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-3 py-1 rounded-full w-fit">
+                0 kết quả
+              </span>
+            </div>
+
+            <div class="overflow-x-auto bg-white rounded-xl border border-slate-200/80 shadow-sm">
+              <table class="w-full text-left border-collapse table-auto min-w-[800px]">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold tracking-wider border-b border-slate-200">
+                    <th class="px-3 py-3 text-center w-[4%]">#</th>
+                    <th class="px-3 py-3 w-[15%]">Số / Ký hiệu</th>
+                    <th class="px-3 py-3 w-[12%]">Phân loại</th>
+                    <th class="px-3 py-3 w-[13%]">Loại VB</th>
+                    <th class="px-3 py-3 w-[20%]">Nơi ban hành / Phòng ban</th>
+                    <th class="px-3 py-3 w-[11%]">Ngày ban hành</th>
+                    <th class="px-3 py-3 w-[17%]">Trích yếu nội dung</th>
+                    <th class="px-3 py-3 text-center w-[8%]">Link Drive</th>
+                  </tr>
+                </thead>
+                <tbody id="statDetailTableBody" class="divide-y divide-slate-100 text-xs">
+                  <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                      Chưa có dữ liệu chi tiết.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 3: QUẢN LÝ USER (USER MANAGEMENT - quantri only) -->
+      <div id="tabUsersContent" class="hidden space-y-8">
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 space-y-6">
+          <div class="flex items-center space-x-3 border-b border-slate-200/80 pb-4">
+            <i class="fa-solid fa-users-gear text-blue-600 text-2xl"></i>
+            <div>
+              <h2 class="text-lg font-bold text-slate-800">Quản Lý Tài Khoản Người Dùng</h2>
+              <p class="text-xs text-slate-500">Thêm tài khoản mới hoặc xóa tài khoản hiện có trong hệ thống</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Form Thêm User Mới -->
+            <div class="lg:col-span-4">
+              <div class="bg-slate-50 rounded-xl p-5 border border-slate-200/80 space-y-4">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center">
+                  <i class="fa-solid fa-user-plus text-blue-600 mr-2"></i>
+                  Thêm Tài Khoản Mới
+                </h3>
+
+                <form id="addUserForm" class="space-y-3">
+                  <div>
+                    <label for="newUsername" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Tên đăng nhập <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" id="newUsername" required placeholder="Nhập username mới..."
+                      class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div>
+                    <label for="newPassword" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Mật khẩu <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="password" id="newPassword" required placeholder="Nhập mật khẩu..."
+                      class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div>
+                    <label for="newUserRole" class="block text-xs font-semibold text-slate-700 mb-1">
+                      Vai trò (Role) <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="newUserRole" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="vanthu">Văn thư (Chỉnh sửa / Nhập mới)</option>
+                      <option value="quanly">Quản lý (Chỉ xem)</option>
+                      <option value="quantri">Quản trị (Admin)</option>
+                    </select>
+                  </div>
+
+                  <button type="submit" id="btnAddUserSubmit"
+                    class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow transition flex items-center justify-center cursor-pointer">
+                    <i class="fa-solid fa-user-plus mr-1.5"></i> Tạo Tài Khoản
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Bảng Danh Sách User -->
+            <div class="lg:col-span-8">
+              <div class="space-y-3">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center">
+                  <i class="fa-solid fa-users text-blue-600 mr-2"></i>
+                  Danh Sách Tài Khoản Hệ Thống
+                </h3>
+
+                <div class="overflow-x-auto bg-white rounded-xl border border-slate-200/80 shadow-sm">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                        <th class="px-3 py-2.5 text-center w-[6%]">#</th>
+                        <th class="px-3 py-2.5">Tên đăng nhập</th>
+                        <th class="px-3 py-2.5">Mật khẩu</th>
+                        <th class="px-3 py-2.5">Vai trò</th>
+                        <th class="px-3 py-2.5 text-center">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="divide-y divide-slate-100">
+                      <!-- Populated via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </div>

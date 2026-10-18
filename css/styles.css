@@ -107,6 +107,16 @@ table {
   word-break: break-word;
 }
 
+/* Full width table layout mode when form column is hidden for 'quanly' */
+#tableColumnContainer.lg\:col-span-12 {
+  width: 100%;
+}
+
+/* User management table styling enhancements */
+#userTableBody tr:last-child {
+  border-bottom: none;
+}
+
 /* Print styling */
 @media print {
   .no-print {
