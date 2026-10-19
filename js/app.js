@@ -98,6 +98,25 @@ const ngayBanHanhInput = document.getElementById("ngayBanHanh");
 const driveLinkInput = document.getElementById("driveLink");
 const trichYeuInput = document.getElementById("trichYeu");
 
+// DOM Elements - Response Document Form
+const hasResponseCheckboxContainer = document.getElementById("hasResponseCheckboxContainer");
+const hasResponseDocInput = document.getElementById("hasResponseDoc");
+const responseDocSection = document.getElementById("responseDocSection");
+const responseSoKyHieuInput = document.getElementById("responseSoKyHieu");
+const responseNgayBanHanhInput = document.getElementById("responseNgayBanHanh");
+const responseCoQuanBanHanhInput = document.getElementById("responseCoQuanBanHanh");
+const responseTrichYeuInput = document.getElementById("responseTrichYeu");
+
+// DOM Elements - Response Document Detail Modal
+const responseDetailModal = document.getElementById("responseDetailModal");
+const closeResponseModalBtn = document.getElementById("closeResponseModalBtn");
+const modalBtnClose = document.getElementById("modalBtnClose");
+const modalBtnJumpToDoc = document.getElementById("modalBtnJumpToDoc");
+const modalResponseSoKyHieu = document.getElementById("modalResponseSoKyHieu");
+const modalResponseNgayBanHanh = document.getElementById("modalResponseNgayBanHanh");
+const modalResponseCoQuan = document.getElementById("modalResponseCoQuan");
+const modalResponseTrichYeu = document.getElementById("modalResponseTrichYeu");
+
 // DOM Elements - Table & Search
 const searchInput = document.getElementById("searchInput");
 const filterLoaiCongVan = document.getElementById("filterLoaiCongVan");
@@ -395,6 +414,12 @@ function updateDynamicUnitField() {
 
     unitInputText.setAttribute("required", "true");
     unitSelectBox.removeAttribute("required");
+
+    // Hide response section for incoming documents
+    if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.add("hidden");
+    if (responseDocSection) responseDocSection.classList.add("hidden");
+    if (hasResponseDocInput) hasResponseDocInput.checked = false;
+    toggleResponseDocFields(false);
   } else {
     unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
     unitTextContainer.classList.add("hidden");
@@ -402,7 +427,38 @@ function updateDynamicUnitField() {
 
     unitInputText.removeAttribute("required");
     unitSelectBox.setAttribute("required", "true");
+
+    // Show response checkbox container for outgoing documents
+    if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.remove("hidden");
+    toggleResponseDocFields(hasResponseDocInput ? hasResponseDocInput.checked : false);
   }
+}
+
+function toggleResponseDocFields(show) {
+  if (!responseDocSection) return;
+  if (show) {
+    responseDocSection.classList.remove("hidden");
+    if (responseSoKyHieuInput) responseSoKyHieuInput.setAttribute("required", "true");
+    if (responseNgayBanHanhInput) responseNgayBanHanhInput.setAttribute("required", "true");
+    if (responseCoQuanBanHanhInput) responseCoQuanBanHanhInput.setAttribute("required", "true");
+    if (responseTrichYeuInput) responseTrichYeuInput.setAttribute("required", "true");
+
+    if (responseNgayBanHanhInput && !responseNgayBanHanhInput.value) {
+      responseNgayBanHanhInput.value = new Date().toISOString().split("T")[0];
+    }
+  } else {
+    responseDocSection.classList.add("hidden");
+    if (responseSoKyHieuInput) responseSoKyHieuInput.removeAttribute("required");
+    if (responseNgayBanHanhInput) responseNgayBanHanhInput.removeAttribute("required");
+    if (responseCoQuanBanHanhInput) responseCoQuanBanHanhInput.removeAttribute("required");
+    if (responseTrichYeuInput) responseTrichYeuInput.removeAttribute("required");
+  }
+}
+
+if (hasResponseDocInput) {
+  hasResponseDocInput.addEventListener("change", (e) => {
+    toggleResponseDocFields(e.target.checked);
+  });
 }
 
 if (loaiCongVanInput) {
@@ -436,6 +492,22 @@ if (form) {
       return;
     }
 
+    const hasResponse = loai_cong_van === "Công văn Đi" && hasResponseDocInput && hasResponseDocInput.checked;
+
+    if (hasResponse) {
+      const respSoKyHieu = responseSoKyHieuInput ? responseSoKyHieuInput.value.trim() : "";
+      const respNgayBH = responseNgayBanHanhInput ? responseNgayBanHanhInput.value : "";
+      const respCoQuan = responseCoQuanBanHanhInput ? responseCoQuanBanHanhInput.value.trim() : "";
+      const respTrichYeu = responseTrichYeuInput ? responseTrichYeuInput.value.trim() : "";
+
+      if (!respSoKyHieu || !respNgayBH || !respCoQuan || !respTrichYeu) {
+        showNotification("Vui lòng nhập đầy đủ thông tin Công văn phản hồi!", "error");
+        return;
+      }
+    }
+
+    const currentDoc = currentEditId ? allDispatches.find(item => item.id === currentEditId) : null;
+
     const dispatchData = {
       so_ky_hieu,
       loai_cong_van,
@@ -444,25 +516,77 @@ if (form) {
       ngay_ban_hanh,
       trich_yeu,
       drive_link,
-      created_at: currentEditId ? (allDispatches.find(item => item.id === currentEditId)?.created_at || Date.now()) : Date.now()
+      created_at: currentDoc ? (currentDoc.created_at || Date.now()) : Date.now()
     };
+
+    if (currentDoc && currentDoc.response_doc_id) {
+      dispatchData.response_doc_id = currentDoc.response_doc_id;
+    }
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang lưu...`;
 
     try {
-      if (currentEditId) {
-        const itemRef = ref(database, `cong_van/${currentEditId}`);
+      let mainDocId = currentEditId;
+
+      if (mainDocId) {
+        const itemRef = ref(database, `cong_van/${mainDocId}`);
         await update(itemRef, dispatchData);
-        showNotification("Cập nhật công văn thành công!");
-        resetForm();
       } else {
         const congVanRef = ref(database, "cong_van");
         const newRef = push(congVanRef);
+        mainDocId = newRef.key;
         await set(newRef, dispatchData);
-        showNotification("Thêm công văn mới thành công!");
-        resetForm();
       }
+
+      // Logic xử lý Công văn phản hồi (đồng thời ghi nhận vào Công văn Đến tại node /cong_van/cong_van_den/)
+      if (hasResponse) {
+        const respSoKyHieu = responseSoKyHieuInput.value.trim();
+        const respNgayBH = responseNgayBanHanhInput.value;
+        const respCoQuan = responseCoQuanBanHanhInput.value.trim();
+        const respTrichYeu = responseTrichYeuInput.value.trim();
+
+        const responseRecordData = {
+          so_ky_hieu: respSoKyHieu,
+          loai_cong_van: "Công văn Đến",
+          loai_van_ban: "Công văn phản hồi",
+          phong_ban: respCoQuan,
+          ngay_ban_hanh: respNgayBH,
+          trich_yeu: respTrichYeu,
+          lien_ket_cong_van_di_id: mainDocId,
+          created_at: Date.now()
+        };
+
+        let responseDocId = (currentDoc && currentDoc.response_doc_id) ? currentDoc.response_doc_id : null;
+
+        if (responseDocId) {
+          const respRef = ref(database, `cong_van/cong_van_den/${responseDocId}`);
+          await update(respRef, responseRecordData);
+        } else {
+          const respListRef = ref(database, "cong_van/cong_van_den");
+          const newRespRef = push(respListRef);
+          responseDocId = newRespRef.key;
+          await set(newRespRef, responseRecordData);
+        }
+
+        // Lưu mã ID liên kết giữa Công văn đi (response_doc_id)
+        await update(ref(database, `cong_van/${mainDocId}`), {
+          response_doc_id: responseDocId
+        });
+      } else if (currentDoc && currentDoc.response_doc_id && loai_cong_van === "Công văn Đi") {
+        // Nếu trước đó có công văn phản hồi nhưng người dùng bỏ chọn checkbox
+        try {
+          await remove(ref(database, `cong_van/cong_van_den/${currentDoc.response_doc_id}`));
+          await update(ref(database, `cong_van/${mainDocId}`), {
+            response_doc_id: null
+          });
+        } catch (e) {
+          console.error("Error removing linked response doc:", e);
+        }
+      }
+
+      showNotification(currentEditId ? "Cập nhật công văn thành công!" : "Thêm công văn mới thành công!");
+      resetForm();
     } catch (error) {
       console.error("Save error:", error);
       showNotification("Lỗi khi lưu công văn: " + error.message, "error");
@@ -487,6 +611,12 @@ function resetForm() {
   cancelEditBtn.classList.add("hidden");
 
   loaiCongVanInput.value = "Công văn Đến";
+  if (hasResponseDocInput) hasResponseDocInput.checked = false;
+  if (responseSoKyHieuInput) responseSoKyHieuInput.value = "";
+  if (responseNgayBanHanhInput) responseNgayBanHanhInput.value = "";
+  if (responseCoQuanBanHanhInput) responseCoQuanBanHanhInput.value = "";
+  if (responseTrichYeuInput) responseTrichYeuInput.value = "";
+
   updateDynamicUnitField();
   setDefaultDate();
 }
@@ -521,6 +651,25 @@ window.editDispatch = function(id) {
   trichYeuInput.value = item.trich_yeu || "";
   driveLinkInput.value = item.drive_link || "";
 
+  // Load linked response document data if exists
+  if (item.loai_cong_van === "Công văn Đi" && item.response_doc_id) {
+    const respItem = allDispatches.find(d => d.id === item.response_doc_id);
+    if (respItem) {
+      if (hasResponseDocInput) hasResponseDocInput.checked = true;
+      toggleResponseDocFields(true);
+      if (responseSoKyHieuInput) responseSoKyHieuInput.value = respItem.so_ky_hieu || "";
+      if (responseNgayBanHanhInput) responseNgayBanHanhInput.value = respItem.ngay_ban_hanh || "";
+      if (responseCoQuanBanHanhInput) responseCoQuanBanHanhInput.value = respItem.phong_ban || "";
+      if (responseTrichYeuInput) responseTrichYeuInput.value = respItem.trich_yeu || "";
+    } else {
+      if (hasResponseDocInput) hasResponseDocInput.checked = false;
+      toggleResponseDocFields(false);
+    }
+  } else {
+    if (hasResponseDocInput) hasResponseDocInput.checked = false;
+    toggleResponseDocFields(false);
+  }
+
   formTitle.textContent = "Chỉnh Sửa Công Văn";
   submitBtn.className = "w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center justify-center cursor-pointer";
   submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`;
@@ -536,8 +685,21 @@ window.deleteDispatch = async function(id) {
 
   if (confirm(`Bạn có chắc chắn muốn xóa công văn số "${item.so_ky_hieu}"?`)) {
     try {
-      const itemRef = ref(database, `cong_van/${id}`);
-      await remove(itemRef);
+      if (item.is_subnode_den) {
+        const itemRef = ref(database, `cong_van/cong_van_den/${id}`);
+        await remove(itemRef);
+      } else {
+        const itemRef = ref(database, `cong_van/${id}`);
+        await remove(itemRef);
+        // Clean up linked response document if exists
+        if (item.response_doc_id) {
+          try {
+            await remove(ref(database, `cong_van/cong_van_den/${item.response_doc_id}`));
+          } catch (err) {
+            console.error("Error removing linked response doc on delete:", err);
+          }
+        }
+      }
       showNotification("Xóa công văn thành công!");
       if (currentEditId === id) {
         resetForm();
@@ -563,10 +725,24 @@ function initFirebaseListener() {
 
     if (data) {
       Object.keys(data).forEach((key) => {
-        allDispatches.push({
-          id: key,
-          ...data[key]
-        });
+        if (key === "cong_van_den") {
+          // Flatten records from subnode /cong_van/cong_van_den/
+          const denSubnodeData = data[key];
+          if (denSubnodeData && typeof denSubnodeData === "object") {
+            Object.keys(denSubnodeData).forEach((subKey) => {
+              allDispatches.push({
+                id: subKey,
+                is_subnode_den: true,
+                ...denSubnodeData[subKey]
+              });
+            });
+          }
+        } else {
+          allDispatches.push({
+            id: key,
+            ...data[key]
+          });
+        }
       });
     }
 
@@ -680,12 +856,20 @@ function renderDispatchList() {
     const rowNum = startIndex + index + 1;
     const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
     const canEdit = currentRole !== "quanly";
+    const hasResponse = item.loai_cong_van === "Công văn Đi" && item.response_doc_id;
 
     return `
-      <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+      <tr id="row-${item.id}" class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
         <td class="px-2.5 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
         <td class="px-2.5 py-3 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
+          ${hasResponse ? `
+            <div class="mt-1">
+              <span onclick="window.viewLinkedResponseDoc('${item.response_doc_id}')" class="response-badge" title="Nhấp để xem chi tiết Công văn phản hồi">
+                <i class="fa-solid fa-reply mr-1"></i> Có CV phản hồi
+              </span>
+            </div>
+          ` : ""}
         </td>
         <td class="px-2.5 py-3">
           <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${badgeClass}">
@@ -1124,6 +1308,70 @@ window.deleteCustomUser = async function(id, username) {
     }
   }
 };
+
+// -------------------------------------------------------------
+// 7. RESPONSE DOCUMENT DETAIL MODAL LOGIC
+// -------------------------------------------------------------
+let currentActiveResponseDocId = null;
+
+window.viewLinkedResponseDoc = function(responseDocId) {
+  const respItem = allDispatches.find(d => d.id === responseDocId);
+  currentActiveResponseDocId = responseDocId;
+
+  if (respItem) {
+    if (modalResponseSoKyHieu) modalResponseSoKyHieu.textContent = respItem.so_ky_hieu || "Không có";
+    if (modalResponseNgayBanHanh) modalResponseNgayBanHanh.textContent = formatDate(respItem.ngay_ban_hanh);
+    if (modalResponseCoQuan) modalResponseCoQuan.textContent = respItem.phong_ban || "Không có";
+    if (modalResponseTrichYeu) modalResponseTrichYeu.textContent = respItem.trich_yeu || "Không có";
+  } else {
+    if (modalResponseSoKyHieu) modalResponseSoKyHieu.textContent = "Chưa tìm thấy bản ghi";
+    if (modalResponseNgayBanHanh) modalResponseNgayBanHanh.textContent = "--";
+    if (modalResponseCoQuan) modalResponseCoQuan.textContent = "--";
+    if (modalResponseTrichYeu) modalResponseTrichYeu.textContent = "Thông tin công văn phản hồi đang được cập nhật...";
+  }
+
+  if (responseDetailModal) {
+    responseDetailModal.classList.remove("hidden");
+  }
+};
+
+function closeResponseModal() {
+  if (responseDetailModal) {
+    responseDetailModal.classList.add("hidden");
+  }
+}
+
+if (closeResponseModalBtn) closeResponseModalBtn.addEventListener("click", closeResponseModal);
+if (modalBtnClose) modalBtnClose.addEventListener("click", closeResponseModal);
+
+if (modalBtnJumpToDoc) {
+  modalBtnJumpToDoc.addEventListener("click", () => {
+    closeResponseModal();
+
+    if (filterLoaiCongVan) {
+      filterLoaiCongVan.value = "Công văn Đến";
+    }
+    if (searchInput) {
+      searchInput.value = "";
+    }
+
+    currentPage = 1;
+    renderDispatchList();
+
+    if (currentActiveResponseDocId) {
+      setTimeout(() => {
+        const targetRow = document.getElementById(`row-${currentActiveResponseDocId}`);
+        if (targetRow) {
+          targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+          targetRow.classList.add("bg-amber-100/80");
+          setTimeout(() => {
+            targetRow.classList.remove("bg-amber-100/80");
+          }, 2500);
+        }
+      }, 100);
+    }
+  });
+}
 
 // Bind Backup Click Events
 if (btnExportExcel) btnExportExcel.addEventListener("click", exportToExcel);

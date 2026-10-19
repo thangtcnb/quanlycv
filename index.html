@@ -289,6 +289,60 @@
                   class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-y"></textarea>
               </div>
 
+              <!-- 8. Công văn phản hồi Section (chỉ dành cho Công văn Đi) -->
+              <div id="hasResponseCheckboxContainer" class="hidden pt-2 border-t border-slate-200">
+                <label class="flex items-center space-x-2.5 cursor-pointer">
+                  <input type="checkbox" id="hasResponseDoc" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 transition">
+                  <span class="text-xs font-bold text-indigo-900 flex items-center">
+                    <i class="fa-solid fa-reply-all mr-1.5 text-indigo-600"></i>
+                    Có công văn phản hồi
+                  </span>
+                </label>
+              </div>
+
+              <div id="responseDocSection" class="hidden p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3">
+                <div class="text-xs font-bold text-indigo-900 flex items-center pb-1 border-b border-indigo-200/80">
+                  <i class="fa-solid fa-file-circle-check text-indigo-600 mr-1.5"></i>
+                  Thông tin Công văn phản hồi (Đồng thời ghi nhận vào CV Đến)
+                </div>
+
+                <!-- Số / Ký hiệu phản hồi -->
+                <div>
+                  <label for="responseSoKyHieu" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Số / Ký hiệu phản hồi <span class="text-rose-500">*</span>
+                  </label>
+                  <input type="text" id="responseSoKyHieu" placeholder="VD: 456/CV-BGDDT"
+                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                </div>
+
+                <!-- Ngày ban hành / đến -->
+                <div>
+                  <label for="responseNgayBanHanh" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Ngày ban hành / đến <span class="text-rose-500">*</span>
+                  </label>
+                  <input type="date" id="responseNgayBanHanh"
+                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                </div>
+
+                <!-- Cơ quan ban hành -->
+                <div>
+                  <label for="responseCoQuanBanHanh" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Cơ quan ban hành phản hồi <span class="text-rose-500">*</span>
+                  </label>
+                  <input type="text" id="responseCoQuanBanHanh" placeholder="VD: Bộ Giáo dục và Đào tạo..."
+                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                </div>
+
+                <!-- Trích yếu nội dung phản hồi -->
+                <div>
+                  <label for="responseTrichYeu" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Trích yếu nội dung phản hồi <span class="text-rose-500">*</span>
+                  </label>
+                  <textarea id="responseTrichYeu" rows="2" placeholder="Nội dung trích yếu của công văn phản hồi..."
+                    class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-y"></textarea>
+                </div>
+              </div>
+
               <!-- Form Submit Button -->
               <div class="pt-2">
                 <button type="submit" id="submitBtn"
@@ -633,6 +687,68 @@
       </div>
     </footer>
 
+  </div>
+
+  <!-- MODAL XEM CHI TIẾT CÔNG VĂN PHẢN HỒI -->
+  <div id="responseDetailModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden transform transition-all animate-fade-in">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-indigo-900 to-blue-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="p-2 bg-white/10 rounded-lg">
+            <i class="fa-solid fa-reply-all text-indigo-300 text-lg"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Chi Tiết Công Văn Phản Hồi</h3>
+            <p class="text-[11px] text-indigo-200">Thông tin bản ghi Công văn đến được liên kết</p>
+          </div>
+        </div>
+        <button type="button" id="closeResponseModalBtn" class="text-slate-300 hover:text-white text-xl p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-4 text-xs">
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center space-x-2 text-amber-800">
+          <i class="fa-solid fa-link text-amber-600 text-sm flex-shrink-0"></i>
+          <span>Công văn phản hồi này đã được đồng bộ tự động vào danh mục <strong>Công văn Đến</strong>.</span>
+        </div>
+
+        <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div class="grid grid-cols-3 gap-2 pb-2 border-b border-slate-200">
+            <span class="font-semibold text-slate-500">Số / Ký hiệu:</span>
+            <span id="modalResponseSoKyHieu" class="col-span-2 font-bold text-slate-900 text-sm">--</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pb-2 border-b border-slate-200">
+            <span class="font-semibold text-slate-500">Ngày ban hành / đến:</span>
+            <span id="modalResponseNgayBanHanh" class="col-span-2 text-slate-800 font-medium">--</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pb-2 border-b border-slate-200">
+            <span class="font-semibold text-slate-500">Cơ quan ban hành:</span>
+            <span id="modalResponseCoQuan" class="col-span-2 text-slate-800 font-medium">--</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <span class="font-semibold text-slate-500">Trích yếu nội dung:</span>
+            <div id="modalResponseTrichYeu" class="col-span-2 text-slate-800 leading-relaxed font-normal">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <button type="button" id="modalBtnClose" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl text-xs transition cursor-pointer">
+          Đóng
+        </button>
+        <button type="button" id="modalBtnJumpToDoc" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition shadow flex items-center space-x-1.5 cursor-pointer">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          <span>Chuyển tới Công văn đến</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- App Script -->
