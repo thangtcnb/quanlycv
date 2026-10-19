@@ -158,6 +158,21 @@ const newPasswordInput = document.getElementById("newPassword");
 const newUserRoleSelect = document.getElementById("newUserRole");
 const userTableBody = document.getElementById("userTableBody");
 
+// Helper to normalize and display document classification
+function isCongVanDi(loai) {
+  return loai === "CongVanDi" || loai === "Công văn Đi";
+}
+
+function isCongVanDen(loai) {
+  return loai === "CongVanDen" || loai === "Công văn Đến";
+}
+
+function getDisplayLoaiCongVan(loai) {
+  if (isCongVanDi(loai)) return "Công văn Đi";
+  if (isCongVanDen(loai)) return "Công văn Đến";
+  return loai || "";
+}
+
 // Toast Notification Function
 function showNotification(message, type = "success") {
   const toastContainer = document.getElementById("toastContainer");
@@ -573,6 +588,9 @@ if (form) {
         if (currentDoc && currentDoc.is_subnode_den) {
           const itemRef = ref(database, `cong_van/cong_van_den/${mainDocId}`);
           await update(itemRef, dispatchData);
+        } else if (currentDoc && currentDoc.is_subnode_di) {
+          const itemRef = ref(database, `cong_van/cong_van_di/${mainDocId}`);
+          await update(itemRef, dispatchData);
         } else {
           const itemRef = ref(database, `cong_van/${mainDocId}`);
           await update(itemRef, dispatchData);
@@ -584,8 +602,8 @@ if (form) {
           mainDocId = newRef.key;
           await set(newRef, dispatchData);
         } else {
-          const congVanRef = ref(database, "cong_van");
-          const newRef = push(congVanRef);
+          const diListRef = ref(database, "cong_van/cong_van_di");
+          const newRef = push(diListRef);
           mainDocId = newRef.key;
           await set(newRef, dispatchData);
         }
@@ -697,7 +715,7 @@ window.editDispatch = function(id) {
 
   updateDynamicUnitField();
 
-  if (item.loai_cong_van === "Công văn Đến") {
+  if (isCongVanDen(item.loai_cong_van)) {
     const nguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
     if (nguonCongVanSelect) nguonCongVanSelect.value = nguon;
     updateDynamicUnitField();
@@ -713,10 +731,10 @@ window.editDispatch = function(id) {
   loaiVanBanInput.value = item.loai_van_ban || "";
   ngayBanHanhInput.value = item.ngay_ban_hanh || "";
   trichYeuInput.value = item.trich_yeu || "";
-  driveLinkInput.value = item.drive_link || "";
+  driveLinkInput.value = item.drive_link || item.link_google_drive || "";
 
   // Load linked response document data if exists
-  if (item.loai_cong_van === "Công văn Đi" && item.response_doc_id) {
+  if (isCongVanDi(item.loai_cong_van) && item.response_doc_id) {
     const respItem = allDispatches.find(d => d.id === item.response_doc_id);
     if (respItem) {
       if (hasResponseDocInput) hasResponseDocInput.checked = true;
@@ -752,6 +770,9 @@ window.deleteDispatch = async function(id) {
     try {
       if (item.is_subnode_den) {
         const itemRef = ref(database, `cong_van/cong_van_den/${id}`);
+        await remove(itemRef);
+      } else if (item.is_subnode_di) {
+        const itemRef = ref(database, `cong_van/cong_van_di/${id}`);
         await remove(itemRef);
       } else {
         const itemRef = ref(database, `cong_van/${id}`);
@@ -833,6 +854,18 @@ async function initFirebaseListener() {
               });
             });
           }
+        } else if (key === "cong_van_di") {
+          // Flatten records from subnode /cong_van/cong_van_di/
+          const diSubnodeData = data[key];
+          if (diSubnodeData && typeof diSubnodeData === "object") {
+            Object.keys(diSubnodeData).forEach((subKey) => {
+              allDispatches.push({
+                id: subKey,
+                is_subnode_di: true,
+                ...diSubnodeData[subKey]
+              });
+            });
+          }
         } else {
           allDispatches.push({
             id: key,
@@ -906,7 +939,10 @@ function getFilteredDispatches() {
       (item.loai_van_ban && item.loai_van_ban.toLowerCase().includes(query)) ||
       (item.phong_ban && item.phong_ban.toLowerCase().includes(query));
 
-    const matchLoai = !selectedLoai || item.loai_cong_van === selectedLoai;
+    const matchLoai = !selectedLoai ||
+      (selectedLoai === "Công văn Đi" && isCongVanDi(item.loai_cong_van)) ||
+      (selectedLoai === "Công văn Đến" && isCongVanDen(item.loai_cong_van)) ||
+      item.loai_cong_van === selectedLoai;
 
     return matchSearch && matchLoai;
   });
@@ -944,15 +980,16 @@ function renderDispatchList() {
   }
 
   dispatchTableBody.innerHTML = currentItems.map((item, index) => {
-    const isDen = item.loai_cong_van === "Công văn Đến";
+    const isDen = isCongVanDen(item.loai_cong_van);
     const badgeClass = isDen
       ? "bg-blue-100 text-blue-800 border-blue-200"
       : "bg-purple-100 text-purple-800 border-purple-200";
 
     const rowNum = startIndex + index + 1;
-    const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
+    const driveUrl = item.drive_link || item.link_google_drive || "";
+    const hasDriveLink = driveUrl && driveUrl.trim() !== "";
     const canEdit = currentRole !== "quanly";
-    const hasResponse = item.loai_cong_van === "Công văn Đi" && item.response_doc_id;
+    const hasResponse = isCongVanDi(item.loai_cong_van) && item.response_doc_id;
 
     return `
       <tr id="row-${item.id}" class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
@@ -970,7 +1007,7 @@ function renderDispatchList() {
         <td class="px-2.5 py-3">
           <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${badgeClass}">
             <i class="fa-solid ${isDen ? 'fa-inbox' : 'fa-paper-plane'} mr-1"></i>
-            ${escapeHtml(item.loai_cong_van)}
+            ${escapeHtml(getDisplayLoaiCongVan(item.loai_cong_van))}
           </span>
         </td>
         <td class="px-2.5 py-3 text-slate-700 font-medium break-words">
@@ -1117,11 +1154,15 @@ function runStatistics() {
     filtered = filtered.filter(item => item.ngay_ban_hanh <= endDate);
   }
   if (selectedLoai !== "Tất cả") {
-    filtered = filtered.filter(item => item.loai_cong_van === selectedLoai);
+    filtered = filtered.filter(item => {
+      if (selectedLoai === "Công văn Đi") return isCongVanDi(item.loai_cong_van);
+      if (selectedLoai === "Công văn Đến") return isCongVanDen(item.loai_cong_van);
+      return item.loai_cong_van === selectedLoai;
+    });
   }
   if (selectedNguonDen !== "Tất cả nguồn") {
     filtered = filtered.filter(item => {
-      if (item.loai_cong_van !== "Công văn Đến") return false;
+      if (!isCongVanDen(item.loai_cong_van)) return false;
       const itemNguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
       return itemNguon === selectedNguonDen;
     });
@@ -1131,8 +1172,8 @@ function runStatistics() {
   }
 
   const totalCount = filtered.length;
-  const denCount = filtered.filter(i => i.loai_cong_van === "Công văn Đến").length;
-  const diCount = filtered.filter(i => i.loai_cong_van === "Công văn Đi").length;
+  const denCount = filtered.filter(i => isCongVanDen(i.loai_cong_van)).length;
+  const diCount = filtered.filter(i => isCongVanDi(i.loai_cong_van)).length;
 
   const statTotal = document.getElementById("statTotalCount");
   const statDen = document.getElementById("statDenCount");
@@ -1181,12 +1222,13 @@ function renderStatDetailTable() {
   }
 
   statDetailTableBody.innerHTML = currentItems.map((item, index) => {
-    const isDen = item.loai_cong_van === "Công văn Đến";
+    const isDen = isCongVanDen(item.loai_cong_van);
     const badgeClass = isDen
       ? "bg-blue-100 text-blue-800 border-blue-200"
       : "bg-purple-100 text-purple-800 border-purple-200";
-    const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
-    const hasResponse = item.loai_cong_van === "Công văn Đi" && item.response_doc_id;
+    const driveUrl = item.drive_link || item.link_google_drive || "";
+    const hasDriveLink = driveUrl && driveUrl.trim() !== "";
+    const hasResponse = isCongVanDi(item.loai_cong_van) && item.response_doc_id;
 
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
@@ -1203,7 +1245,7 @@ function renderStatDetailTable() {
         </td>
         <td class="px-3 py-2.5">
           <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${badgeClass}">
-            ${escapeHtml(item.loai_cong_van)}
+            ${escapeHtml(getDisplayLoaiCongVan(item.loai_cong_van))}
           </span>
         </td>
         <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
