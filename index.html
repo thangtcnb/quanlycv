@@ -111,6 +111,10 @@
           <div class="flex items-center space-x-4">
             <!-- Header Backup Buttons for quantri -->
             <div id="headerBackupContainer" class="hidden flex items-center space-x-2">
+              <button id="headerBtnImportExcel" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow transition flex items-center space-x-1.5 cursor-pointer text-xs border border-blue-500" title="Import từ Excel (.xlsx, .xls)">
+                <i class="fa-solid fa-file-import"></i>
+                <span class="hidden sm:inline">Import Excel</span>
+              </button>
               <button id="headerBtnExportExcel" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow transition flex items-center space-x-1.5 cursor-pointer text-xs border border-emerald-500" title="Xuất dữ liệu Excel (.xlsx)">
                 <i class="fa-solid fa-file-excel"></i>
                 <span class="hidden sm:inline">Xuất Excel</span>
@@ -643,6 +647,11 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none;" />
+              <button id="btnImportExcel" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center space-x-2 cursor-pointer border border-blue-500">
+                <i class="fa-solid fa-file-import text-sm"></i>
+                <span>Import từ Excel</span>
+              </button>
               <button id="btnExportExcel" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center space-x-2 cursor-pointer border border-emerald-500">
                 <i class="fa-solid fa-file-excel text-sm"></i>
                 <span>Xuất Excel (.xlsx)</span>

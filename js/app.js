@@ -76,6 +76,9 @@ const btnExportExcel = document.getElementById("btnExportExcel");
 const btnExportJSON = document.getElementById("btnExportJSON");
 const headerBtnExportExcel = document.getElementById("headerBtnExportExcel");
 const headerBtnExportJSON = document.getElementById("headerBtnExportJSON");
+const excelFileInput = document.getElementById("excelFileInput");
+const btnImportExcel = document.getElementById("btnImportExcel");
+const headerBtnImportExcel = document.getElementById("headerBtnImportExcel");
 
 // DOM Elements - Form
 const form = document.getElementById("dispatchForm");
@@ -208,6 +211,54 @@ function formatDate(dateStr) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
+}
+
+// Convert Excel date or string to YYYY-MM-DD
+function formatDateToYYYYMMDD(val) {
+  if (!val) return "";
+  if (typeof val === "number") {
+    if (typeof XLSX !== "undefined" && XLSX.SSF && XLSX.SSF.parse_date_code) {
+      const dateObj = XLSX.SSF.parse_date_code(val);
+      if (dateObj) {
+        const y = dateObj.y;
+        const m = String(dateObj.m).padStart(2, "0");
+        const d = String(dateObj.d).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+    }
+  }
+  let str = String(val).trim();
+  str = str.split(/[\r\n]+/)[0].trim();
+  str = str.replace(/[^\d\/\-]/g, "").trim();
+  str = str.replace(/\/+/g, "/").replace(/\-+/g, "-");
+
+  if (str.includes("/")) {
+    const parts = str.split("/");
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, "0");
+      const month = parts[1].padStart(2, "0");
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    } else if (parts.length === 2 && parts[1].length === 5) {
+      const day = parts[0].padStart(2, "0");
+      const month = parts[1][0].padStart(2, "0");
+      const year = parts[1].slice(1);
+      return `${year}-${month}-${day}`;
+    }
+  } else if (str.includes("-")) {
+    const parts = str.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      } else {
+        const day = parts[0].padStart(2, "0");
+        const month = parts[1].padStart(2, "0");
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
+      }
+    }
+  }
+  return str;
 }
 
 // Escape HTML Helper
@@ -1623,7 +1674,91 @@ if (modalBtnJumpToDoc) {
   });
 }
 
-// Bind Backup Click Events
+// Excel Import Logic (quantri ONLY)
+async function handleExcelImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (currentRole !== "quantri") {
+    alert("Bạn không có quyền thực hiện chức năng này!");
+    e.target.value = "";
+    return;
+  }
+
+  try {
+    const dataObj = await file.arrayBuffer();
+    const workbook = XLSX.read(dataObj, { type: "array" });
+    const firstSheetName = workbook.SheetNames[0]; // Sheet đầu tiên ("Công văn đi")
+    const worksheet = workbook.Sheets[firstSheetName];
+
+    // Xác định dòng tiêu đề cột ("Số / Ký hiệu") nếu có các dòng trang trí/tiêu đề ở đầu sheet
+    const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    let headerRowIndex = matrix.findIndex(r => Array.isArray(r) && r.includes("Số / Ký hiệu"));
+    if (headerRowIndex === -1) headerRowIndex = 0;
+
+    const rawJsonArray = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
+
+    if (!rawJsonArray || rawJsonArray.length === 0) {
+      alert("Tệp Excel không có dữ liệu!");
+      e.target.value = "";
+      return;
+    }
+
+    const mappedData = rawJsonArray.map(row => {
+      const coPhanHoiVal = String(row["Có phản hồi"] || "").trim().toLowerCase();
+      const has_response = coPhanHoiVal === "có" || coPhanHoiVal === "co" || coPhanHoiVal === "true";
+
+      return {
+        so_ky_hieu: String(row["Số / Ký hiệu"] || "").trim(),
+        link_google_drive: row["Link Google Drive"] ? String(row["Link Google Drive"]).trim() : "",
+        ngay_ban_hanh: formatDateToYYYYMMDD(row["Ngày tháng văn bản"]),
+        loai_van_ban: String(row["Loại văn bản"] || "").trim(),
+        trich_yeu: String(row["Trích yếu nội dung văn bản"] || "").trim(),
+        has_response: has_response,
+        ghi_chu_phan_hoi: row["Ghi chú / Nội dung phản hồi"] ? String(row["Ghi chú / Nội dung phản hồi"]).trim() : "",
+        loai_cong_van: "CongVanDi"
+      };
+    });
+
+    const confirmMessage = "Bạn có chắc chắn muốn import " + mappedData.length + " công văn vào Firebase?";
+    if (!confirm(confirmMessage)) {
+      e.target.value = "";
+      return;
+    }
+
+    // Đẩy trực tiếp mảng JSON thu được lên /cong_van/cong_van_di/
+    const targetRef = ref(database, "cong_van/cong_van_di");
+    await set(targetRef, mappedData);
+
+    alert("Import thành công!");
+
+    // Làm mới danh sách
+    if (typeof renderDispatchList === "function") {
+      renderDispatchList();
+    }
+  } catch (error) {
+    console.error("Import Excel Error:", error);
+    alert("Lỗi khi đọc hoặc import tệp Excel: " + error.message);
+  } finally {
+    e.target.value = "";
+  }
+}
+
+// Bind Import & Backup Click Events
+if (btnImportExcel) {
+  btnImportExcel.addEventListener("click", () => {
+    if (excelFileInput) excelFileInput.click();
+  });
+}
+if (headerBtnImportExcel) {
+  headerBtnImportExcel.addEventListener("click", () => {
+    if (excelFileInput) excelFileInput.click();
+  });
+}
+if (excelFileInput) {
+  excelFileInput.addEventListener("change", handleExcelImport);
+}
+
 if (btnExportExcel) btnExportExcel.addEventListener("click", exportToExcel);
 if (btnExportJSON) btnExportJSON.addEventListener("click", exportToJSON);
 if (headerBtnExportExcel) headerBtnExportExcel.addEventListener("click", exportToExcel);
