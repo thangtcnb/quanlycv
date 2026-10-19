@@ -74,10 +74,8 @@ const headerBackupContainer = document.getElementById("headerBackupContainer");
 const backupSection = document.getElementById("backupSection");
 const btnExportExcel = document.getElementById("btnExportExcel");
 const btnExportJSON = document.getElementById("btnExportJSON");
-const btnImportWord = document.getElementById("btnImportWord");
 const headerBtnExportExcel = document.getElementById("headerBtnExportExcel");
 const headerBtnExportJSON = document.getElementById("headerBtnExportJSON");
-const headerBtnImportWord = document.getElementById("headerBtnImportWord");
 
 // DOM Elements - Form
 const form = document.getElementById("dispatchForm");
@@ -780,9 +778,40 @@ window.deleteDispatch = async function(id) {
 
 // Listen to Realtime Database Dispatches
 let isFirebaseListenerSet = false;
-function initFirebaseListener() {
+async function initFirebaseListener() {
   if (isFirebaseListenerSet) return;
   isFirebaseListenerSet = true;
+
+  try {
+    const congVanDiRef = ref(database, "cong_van/cong_van_di");
+    const snapshot = await get(congVanDiRef);
+    if (!snapshot.exists() || !snapshot.val()) {
+      const response = await fetch("cong_van_data.json");
+      if (response.ok) {
+        const items = await response.json();
+        if (Array.isArray(items) && items.length > 0) {
+          for (const item of items) {
+            const newRef = push(congVanDiRef);
+            await set(newRef, {
+              so_ky_hieu: item.so_ky_hieu || "",
+              link_google_drive: item.link_google_drive || item.drive_link || "",
+              drive_link: item.drive_link || item.link_google_drive || "",
+              ngay_ban_hanh: item.ngay_ban_hanh || "",
+              loai_van_ban: item.loai_van_ban || "",
+              trich_yeu: item.trich_yeu || "",
+              has_response: Boolean(item.has_response),
+              ghi_chu_phan_hoi: item.ghi_chu_phan_hoi || "",
+              loai_cong_van: "CongVanDi",
+              phong_ban: item.phong_ban || "Phòng Hành chính - Tài vụ",
+              created_at: item.created_at || Date.now()
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Auto-seeding check error:", error);
+  }
 
   const congVanRef = ref(database, "cong_van");
 
@@ -1380,56 +1409,6 @@ function exportToJSON() {
   }
 }
 
-async function importFromWordData() {
-  if (currentRole !== "quantri") {
-    showNotification("Bạn không có quyền thực hiện chức năng này!", "error");
-    return;
-  }
-
-  try {
-    const response = await fetch("cong_van_data.json");
-    if (!response.ok) {
-      throw new Error(`Không thể tải tệp cong_van_data.json (${response.status})`);
-    }
-
-    const items = await response.json();
-    if (!Array.isArray(items) || items.length === 0) {
-      showNotification("Tệp cong_van_data.json không chứa dữ liệu hợp lệ!", "error");
-      return;
-    }
-
-    if (!confirm(`Bạn có chắc chắn muốn import ${items.length} công văn vào system?`)) {
-      return;
-    }
-
-    const congVanDiRef = ref(database, "cong_van/cong_van_di");
-    let count = 0;
-
-    for (const item of items) {
-      const newRef = push(congVanDiRef);
-      await set(newRef, {
-        so_ky_hieu: item.so_ky_hieu || "",
-        link_google_drive: item.link_google_drive || item.drive_link || "",
-        drive_link: item.drive_link || item.link_google_drive || "",
-        ngay_ban_hanh: item.ngay_ban_hanh || "",
-        loai_van_ban: item.loai_van_ban || "",
-        trich_yeu: item.trich_yeu || "",
-        has_response: Boolean(item.has_response),
-        ghi_chu_phan_hoi: item.ghi_chu_phan_hoi || "",
-        loai_cong_van: "CongVanDi",
-        phong_ban: item.phong_ban || "Phòng Hành chính - Tài vụ",
-        created_at: item.created_at || Date.now()
-      });
-      count++;
-    }
-
-    showNotification(`Đã import thành công ${count} công văn vào Firebase Realtime Database!`);
-  } catch (error) {
-    console.error("Import Word Error:", error);
-    showNotification("Lỗi khi import dữ liệu: " + error.message, "error");
-  }
-}
-
 // -------------------------------------------------------------
 // 6. USER MANAGEMENT LOGIC (ADMIN / quantri ONLY)
 // -------------------------------------------------------------
@@ -1604,10 +1583,8 @@ if (modalBtnJumpToDoc) {
 // Bind Backup Click Events
 if (btnExportExcel) btnExportExcel.addEventListener("click", exportToExcel);
 if (btnExportJSON) btnExportJSON.addEventListener("click", exportToJSON);
-if (btnImportWord) btnImportWord.addEventListener("click", importFromWordData);
 if (headerBtnExportExcel) headerBtnExportExcel.addEventListener("click", exportToExcel);
 if (headerBtnExportJSON) headerBtnExportJSON.addEventListener("click", exportToJSON);
-if (headerBtnImportWord) headerBtnImportWord.addEventListener("click", importFromWordData);
 
 // -------------------------------------------------------------
 // APP INITIALIZATION
