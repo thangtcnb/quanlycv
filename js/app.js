@@ -797,42 +797,43 @@ window.deleteDispatch = async function(id) {
   }
 };
 
+// Auto Seed Data Function
+async function autoSeedData() {
+  console.log("=== BẮT ĐẦU KIỂM TRA AUTO SEED ===");
+  try {
+    if (typeof firebase !== 'undefined' && firebase.apps && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const dbRef = firebase.database().ref('cong_van/cong_van_di');
+    const snapshot = await dbRef.once('value');
+    console.log("Dữ liệu hiện tại trên Firebase:", snapshot.val());
+
+    if (!snapshot.exists() || !snapshot.val()) {
+      console.log("Database rỗng! Đang tải file cong_van_data.json...");
+      const res = await fetch('./cong_van_data.json');
+      if (!res.ok) throw new Error("Không thể tải file cong_van_data.json (Mã lỗi: " + res.status + ")");
+      const data = await res.json();
+      console.log(`Đã đọc ${data.length} bản ghi từ JSON. Đang đẩy lên Firebase...`);
+
+      // Đẩy dữ liệu lên Firebase
+      await dbRef.set(data);
+      console.log("=== THÀNH CÔNG: Đã đẩy dữ liệu lên Firebase! ===");
+      alert("Đã tự động nạp thành công " + data.length + " công văn vào hệ thống!");
+      if (typeof loadDanhSachCongVan === 'function') loadDanhSachCongVan();
+    } else {
+      console.log("Database đã có dữ liệu, bỏ qua bước Seed.");
+    }
+  } catch (err) {
+    console.error("=== LỖI TRONG QUÁ TRÌNH SEED ===", err);
+    alert("Lỗi nạp dữ liệu: " + err.message);
+  }
+}
+
 // Listen to Realtime Database Dispatches
 let isFirebaseListenerSet = false;
 async function initFirebaseListener() {
   if (isFirebaseListenerSet) return;
   isFirebaseListenerSet = true;
-
-  try {
-    const congVanDiRef = ref(database, "cong_van/cong_van_di");
-    const snapshot = await get(congVanDiRef);
-    if (!snapshot.exists() || !snapshot.val()) {
-      const response = await fetch("cong_van_data.json");
-      if (response.ok) {
-        const items = await response.json();
-        if (Array.isArray(items) && items.length > 0) {
-          for (const item of items) {
-            const newRef = push(congVanDiRef);
-            await set(newRef, {
-              so_ky_hieu: item.so_ky_hieu || "",
-              link_google_drive: item.link_google_drive || item.drive_link || "",
-              drive_link: item.drive_link || item.link_google_drive || "",
-              ngay_ban_hanh: item.ngay_ban_hanh || "",
-              loai_van_ban: item.loai_van_ban || "",
-              trich_yeu: item.trich_yeu || "",
-              has_response: Boolean(item.has_response),
-              ghi_chu_phan_hoi: item.ghi_chu_phan_hoi || "",
-              loai_cong_van: "CongVanDi",
-              phong_ban: item.phong_ban || "Phòng Hành chính - Tài vụ",
-              created_at: item.created_at || Date.now()
-            });
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Auto-seeding check error:", error);
-  }
 
   const congVanRef = ref(database, "cong_van");
 
@@ -1636,5 +1637,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateDynamicUnitField();
   updateStatDeptFilterVisibility();
   setDefaultDate();
+  autoSeedData();
   checkAuthStatus();
 });
