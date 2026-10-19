@@ -427,6 +427,18 @@
                   </select>
                 </div>
               </div>
+
+              <!-- Batch Action Toolbar (quantri ONLY) -->
+              <div id="batchActionToolbar" class="hidden flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs">
+                <div class="flex items-center space-x-2 text-rose-800 font-semibold">
+                  <i class="fa-solid fa-list-check text-rose-600 text-sm"></i>
+                  <span id="selectedCountText">Đã chọn: 0 văn bản</span>
+                </div>
+                <button id="btnBatchDelete" disabled class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow transition flex items-center space-x-1.5 border border-rose-500 text-xs cursor-pointer">
+                  <i class="fa-solid fa-trash-can"></i>
+                  <span>Xóa văn bản đã chọn</span>
+                </button>
+              </div>
             </div>
 
             <!-- Data Table with optimized column widths -->
@@ -580,6 +592,18 @@
               <span id="statDetailBadge" class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-3 py-1 rounded-full w-fit">
                 0 kết quả
               </span>
+            </div>
+
+            <!-- Batch Action Toolbar in Stat Tab (quantri ONLY) -->
+            <div id="statBatchActionToolbar" class="hidden flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs">
+              <div class="flex items-center space-x-2 text-rose-800 font-semibold">
+                <i class="fa-solid fa-list-check text-rose-600 text-sm"></i>
+                <span id="statSelectedCountText">Đã chọn: 0 văn bản</span>
+              </div>
+              <button id="btnStatBatchDelete" disabled class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow transition flex items-center space-x-1.5 border border-rose-500 text-xs cursor-pointer">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Xóa văn bản đã chọn</span>
+              </button>
             </div>
 
             <div class="overflow-x-auto bg-white rounded-xl border border-slate-200/80 shadow-sm">
