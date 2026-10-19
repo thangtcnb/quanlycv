@@ -134,6 +134,36 @@ table {
   white-space: nowrap;
 }
 
+/* Modal animation and response badge styling */
+.animate-fade-in {
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.response-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.375rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.response-badge:hover {
+  background-color: #c7d2fe;
+  color: #1e1b4b;
+  transform: translateY(-1px);
+}
+
 /* Print styling */
 @media print {
   .no-print {
