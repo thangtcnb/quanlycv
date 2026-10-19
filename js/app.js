@@ -106,6 +106,7 @@ const responseSoKyHieuInput = document.getElementById("responseSoKyHieu");
 const responseNgayBanHanhInput = document.getElementById("responseNgayBanHanh");
 const responseCoQuanBanHanhInput = document.getElementById("responseCoQuanBanHanh");
 const responseTrichYeuInput = document.getElementById("responseTrichYeu");
+const responseDriveLinkInput = document.getElementById("responseDriveLink");
 
 // DOM Elements - Response Document Detail Modal
 const responseDetailModal = document.getElementById("responseDetailModal");
@@ -116,6 +117,7 @@ const modalResponseSoKyHieu = document.getElementById("modalResponseSoKyHieu");
 const modalResponseNgayBanHanh = document.getElementById("modalResponseNgayBanHanh");
 const modalResponseCoQuan = document.getElementById("modalResponseCoQuan");
 const modalResponseTrichYeu = document.getElementById("modalResponseTrichYeu");
+const modalResponseDriveContainer = document.getElementById("modalResponseDriveContainer");
 
 // DOM Elements - Table & Search
 const searchInput = document.getElementById("searchInput");
@@ -135,6 +137,14 @@ const btnStatFilter = document.getElementById("btnStatFilter");
 const btnStatReset = document.getElementById("btnStatReset");
 const statDetailTableBody = document.getElementById("statDetailTableBody");
 const statDetailBadge = document.getElementById("statDetailBadge");
+const statPaginationInfo = document.getElementById("statPaginationInfo");
+const statPaginationControls = document.getElementById("statPaginationControls");
+const statPageSizeSelect = document.getElementById("statPageSize");
+
+// Statistics State
+let statCurrentPage = 1;
+let statItemsPerPage = 20;
+let currentFilteredStatItems = [];
 
 // DOM Elements - User Management
 const addUserForm = document.getElementById("addUserForm");
@@ -545,6 +555,7 @@ if (form) {
         const respNgayBH = responseNgayBanHanhInput.value;
         const respCoQuan = responseCoQuanBanHanhInput.value.trim();
         const respTrichYeu = responseTrichYeuInput.value.trim();
+        const respDriveLink = responseDriveLinkInput ? responseDriveLinkInput.value.trim() : "";
 
         const responseRecordData = {
           so_ky_hieu: respSoKyHieu,
@@ -553,6 +564,7 @@ if (form) {
           phong_ban: respCoQuan,
           ngay_ban_hanh: respNgayBH,
           trich_yeu: respTrichYeu,
+          drive_link: respDriveLink,
           lien_ket_cong_van_di_id: mainDocId,
           created_at: Date.now()
         };
@@ -616,6 +628,7 @@ function resetForm() {
   if (responseNgayBanHanhInput) responseNgayBanHanhInput.value = "";
   if (responseCoQuanBanHanhInput) responseCoQuanBanHanhInput.value = "";
   if (responseTrichYeuInput) responseTrichYeuInput.value = "";
+  if (responseDriveLinkInput) responseDriveLinkInput.value = "";
 
   updateDynamicUnitField();
   setDefaultDate();
@@ -661,6 +674,7 @@ window.editDispatch = function(id) {
       if (responseNgayBanHanhInput) responseNgayBanHanhInput.value = respItem.ngay_ban_hanh || "";
       if (responseCoQuanBanHanhInput) responseCoQuanBanHanhInput.value = respItem.phong_ban || "";
       if (responseTrichYeuInput) responseTrichYeuInput.value = respItem.trich_yeu || "";
+      if (responseDriveLinkInput) responseDriveLinkInput.value = respItem.drive_link || "";
     } else {
       if (hasResponseDocInput) hasResponseDocInput.checked = false;
       toggleResponseDocFields(false);
@@ -1029,16 +1043,30 @@ function runStatistics() {
   if (statDen) statDen.textContent = denCount;
   if (statDi) statDi.textContent = diCount;
 
+  currentFilteredStatItems = filtered;
+  statCurrentPage = 1;
+
   // Render Bảng chi tiết công văn thỏa điều kiện lọc trong Tab Thống kê
-  renderStatDetailTable(filtered);
+  renderStatDetailTable();
 }
 
-function renderStatDetailTable(filteredItems) {
+function renderStatDetailTable() {
   if (!statDetailTableBody) return;
+
+  const filteredItems = currentFilteredStatItems || [];
 
   if (statDetailBadge) {
     statDetailBadge.textContent = `${filteredItems.length} kết quả`;
   }
+
+  const totalPages = Math.ceil(filteredItems.length / statItemsPerPage) || 1;
+  if (statCurrentPage > totalPages) {
+    statCurrentPage = totalPages;
+  }
+
+  const startIndex = (statCurrentPage - 1) * statItemsPerPage;
+  const endIndex = Math.min(startIndex + statItemsPerPage, filteredItems.length);
+  const currentItems = filteredItems.slice(startIndex, endIndex);
 
   if (filteredItems.length === 0) {
     statDetailTableBody.innerHTML = `
@@ -1048,20 +1076,32 @@ function renderStatDetailTable(filteredItems) {
         </td>
       </tr>
     `;
+    if (statPaginationInfo) statPaginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 bản ghi";
+    if (statPaginationControls) statPaginationControls.innerHTML = "";
     return;
   }
 
-  statDetailTableBody.innerHTML = filteredItems.map((item, index) => {
+  statDetailTableBody.innerHTML = currentItems.map((item, index) => {
     const isDen = item.loai_cong_van === "Công văn Đến";
     const badgeClass = isDen
       ? "bg-blue-100 text-blue-800 border-blue-200"
       : "bg-purple-100 text-purple-800 border-purple-200";
     const hasDriveLink = item.drive_link && item.drive_link.trim() !== "";
+    const hasResponse = item.loai_cong_van === "Công văn Đi" && item.response_doc_id;
 
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
-        <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${index + 1}</td>
-        <td class="px-3 py-2.5 font-semibold text-slate-900">${escapeHtml(item.so_ky_hieu)}</td>
+        <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${startIndex + index + 1}</td>
+        <td class="px-3 py-2.5 font-semibold text-slate-900 break-words">
+          ${escapeHtml(item.so_ky_hieu)}
+          ${hasResponse ? `
+            <div class="mt-1">
+              <span onclick="window.viewLinkedResponseDoc('${item.response_doc_id}')" class="response-badge" title="Nhấp để xem chi tiết Công văn phản hồi">
+                <i class="fa-solid fa-reply mr-1"></i> Có CV phản hồi
+              </span>
+            </div>
+          ` : ""}
+        </td>
         <td class="px-3 py-2.5">
           <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${badgeClass}">
             ${escapeHtml(item.loai_cong_van)}
@@ -1089,6 +1129,59 @@ function renderStatDetailTable(filteredItems) {
       </tr>
     `;
   }).join("");
+
+  if (statPaginationInfo) {
+    statPaginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filteredItems.length} bản ghi`;
+  }
+
+  renderStatPaginationControls(totalPages);
+}
+
+function renderStatPaginationControls(totalPages) {
+  if (!statPaginationControls) return;
+  let html = "";
+
+  const prevDisabled = statCurrentPage === 1 ? "pagination-btn-disabled" : "";
+  html += `
+    <button onclick="goToStatPage(${statCurrentPage - 1})" class="pagination-btn pagination-btn-default ${prevDisabled}" title="Trang trước">
+      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+    </button>
+  `;
+
+  for (let page = 1; page <= totalPages; page++) {
+    if (page === 1 || page === totalPages || (page >= statCurrentPage - 1 && page <= statCurrentPage + 1)) {
+      const activeClass = page === statCurrentPage ? "pagination-btn-active" : "pagination-btn-default";
+      html += `
+        <button onclick="goToStatPage(${page})" class="pagination-btn ${activeClass}">
+          ${page}
+        </button>
+      `;
+    } else if (page === statCurrentPage - 2 || page === statCurrentPage + 2) {
+      html += `<span class="px-1 text-slate-400">...</span>`;
+    }
+  }
+
+  const nextDisabled = statCurrentPage === totalPages ? "pagination-btn-disabled" : "";
+  html += `
+    <button onclick="goToStatPage(${statCurrentPage + 1})" class="pagination-btn pagination-btn-default ${nextDisabled}" title="Trang sau">
+      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+    </button>
+  `;
+
+  statPaginationControls.innerHTML = html;
+}
+
+window.goToStatPage = function(page) {
+  statCurrentPage = page;
+  renderStatDetailTable();
+};
+
+if (statPageSizeSelect) {
+  statPageSizeSelect.addEventListener("change", (e) => {
+    statItemsPerPage = parseInt(e.target.value, 10) || 20;
+    statCurrentPage = 1;
+    renderStatDetailTable();
+  });
 }
 
 if (btnStatFilter) btnStatFilter.addEventListener("click", runStatistics);
@@ -1323,11 +1416,25 @@ window.viewLinkedResponseDoc = function(responseDocId) {
     if (modalResponseNgayBanHanh) modalResponseNgayBanHanh.textContent = formatDate(respItem.ngay_ban_hanh);
     if (modalResponseCoQuan) modalResponseCoQuan.textContent = respItem.phong_ban || "Không có";
     if (modalResponseTrichYeu) modalResponseTrichYeu.textContent = respItem.trich_yeu || "Không có";
+    if (modalResponseDriveContainer) {
+      if (respItem.drive_link && respItem.drive_link.trim() !== "") {
+        modalResponseDriveContainer.innerHTML = `
+          <a href="${escapeHtml(respItem.drive_link)}" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs font-semibold transition">
+            <i class="fa-brands fa-google-drive text-emerald-600 mr-1.5 text-sm"></i>
+            Xem file Google Drive
+          </a>
+        `;
+      } else {
+        modalResponseDriveContainer.innerHTML = `<span class="text-slate-400 italic">Không có file đính kèm</span>`;
+      }
+    }
   } else {
     if (modalResponseSoKyHieu) modalResponseSoKyHieu.textContent = "Chưa tìm thấy bản ghi";
     if (modalResponseNgayBanHanh) modalResponseNgayBanHanh.textContent = "--";
     if (modalResponseCoQuan) modalResponseCoQuan.textContent = "--";
     if (modalResponseTrichYeu) modalResponseTrichYeu.textContent = "Thông tin công văn phản hồi đang được cập nhật...";
+    if (modalResponseDriveContainer) modalResponseDriveContainer.innerHTML = `<span class="text-slate-400 italic">--</span>`;
   }
 
   if (responseDetailModal) {
