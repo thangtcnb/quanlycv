@@ -159,8 +159,8 @@
 
         <!-- CỘT BÊN TRÁI: Form Nhập Công Văn Mới (lg:col-span-4) -->
         <div id="formColumnContainer" class="lg:col-span-4">
-          <section id="formSection" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden sticky top-6">
-            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
+          <section id="formSection" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden sticky top-6 max-h-[calc(100vh-2rem)] flex flex-col">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between flex-shrink-0">
               <div class="flex items-center space-x-2">
                 <i class="fa-solid fa-pen-to-square text-blue-600 text-lg"></i>
                 <h2 id="formTitle" class="text-base font-bold text-slate-800">Nhập Công Văn Mới</h2>
@@ -170,10 +170,11 @@
               </button>
             </div>
 
-            <form id="dispatchForm" class="p-6 space-y-4">
-              <input type="hidden" id="dispatchId" value="" />
+            <form id="dispatchForm" class="flex flex-col flex-grow min-h-0 overflow-hidden">
+              <div class="p-6 space-y-4 overflow-y-auto flex-grow custom-form-scrollbar">
+                <input type="hidden" id="dispatchId" value="" />
 
-              <!-- 1. Số / Ký hiệu -->
+                <!-- 1. Số / Ký hiệu -->
               <div>
                 <label for="soKyHieu" class="block text-xs font-semibold text-slate-700 mb-1">
                   Số / Ký hiệu <span class="text-rose-500">*</span>
@@ -341,10 +342,21 @@
                   <textarea id="responseTrichYeu" rows="2" placeholder="Nội dung trích yếu của công văn phản hồi..."
                     class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-y"></textarea>
                 </div>
+
+                <!-- Đường dẫn file Google Drive / Đính kèm -->
+                <div>
+                  <label for="responseDriveLink" class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Đường dẫn file Google Drive / Đính kèm
+                  </label>
+                  <input type="url" id="responseDriveLink" placeholder="https://drive.google.com/..."
+                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+                </div>
               </div>
 
-              <!-- Form Submit Button -->
-              <div class="pt-2">
+              </div>
+
+              <!-- Form Submit Button (Fixed Footer) -->
+              <div class="p-4 bg-slate-50 border-t border-slate-200/80 flex-shrink-0">
                 <button type="submit" id="submitBtn"
                   class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow transition flex items-center justify-center cursor-pointer">
                   <i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn
@@ -557,6 +569,27 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Pagination Bar for Statistics Table -->
+            <div class="px-5 py-3 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div class="flex items-center space-x-3">
+                <div id="statPaginationInfo" class="text-slate-500 font-medium">
+                  Hiển thị 0 - 0 trong tổng số 0 bản ghi
+                </div>
+                <div class="flex items-center space-x-1.5">
+                  <label for="statPageSize" class="text-slate-500 font-medium">Số bản ghi/trang:</label>
+                  <select id="statPageSize" class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 outline-none focus:ring-1 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="statPaginationControls" class="flex items-center space-x-1">
+                <!-- JS rendered pagination buttons -->
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -731,9 +764,16 @@
             <span id="modalResponseCoQuan" class="col-span-2 text-slate-800 font-medium">--</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-3 gap-2 pb-2 border-b border-slate-200">
             <span class="font-semibold text-slate-500">Trích yếu nội dung:</span>
             <div id="modalResponseTrichYeu" class="col-span-2 text-slate-800 leading-relaxed font-normal">--</div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 items-center">
+            <span class="font-semibold text-slate-500">File đính kèm:</span>
+            <div id="modalResponseDriveContainer" class="col-span-2">
+              <span class="text-slate-400 italic">Không có file đính kèm</span>
+            </div>
           </div>
         </div>
       </div>

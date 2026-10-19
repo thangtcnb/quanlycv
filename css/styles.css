@@ -40,6 +40,21 @@ body {
   background: #94a3b8;
 }
 
+/* Custom form scrollbar for fixed height form body */
+.custom-form-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-form-scrollbar::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.custom-form-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-form-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* Hide scrollbar for clean horizontal scrolling */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
