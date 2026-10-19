@@ -1398,7 +1398,7 @@ async function importFromWordData() {
       return;
     }
 
-    if (!confirm(`Bạn có chắc chắn muốn import ${items.length} công văn vào /cong_van/cong_van_di/ ?`)) {
+    if (!confirm(`Bạn có chắc chắn muốn import ${items.length} công văn vào system?`)) {
       return;
     }
 
