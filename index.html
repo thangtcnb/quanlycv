@@ -208,13 +208,35 @@
                 </div>
               </div>
 
-              <!-- 3. Dynamic Unit Field: Nơi ban hành (Công văn Đến) vs Phòng ban (Công văn Đi) -->
+              <!-- 3. Nguồn / Phân loại phụ (Công văn Đến) -->
+              <div id="nguonCongVanContainer" class="space-y-3">
+                <div>
+                  <label for="nguonCongVan" class="block text-xs font-semibold text-slate-700 mb-1">
+                    Nguồn / Phân loại công văn đến <span class="text-rose-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-sitemap text-xs"></i>
+                    </span>
+                    <select id="nguonCongVan"
+                      class="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition appearance-none">
+                      <option value="UFM Cơ sở chính">UFM Cơ sở chính</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                    <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. Dynamic Unit Field: Nơi ban hành / Đơn vị ban hành (Công văn Đến) vs Phòng ban (Công văn Đi) -->
               <div>
                 <label id="unitLabel" for="unitInputText" class="block text-xs font-semibold text-slate-700 mb-1">
-                  Nơi ban hành công văn <span class="text-rose-500">*</span>
+                  Đơn vị ban hành <span class="text-rose-500">*</span>
                 </label>
 
-                <!-- Container for Text Input (Công văn Đến) -->
+                <!-- Container for Text Input (Công văn Đến - Khác) -->
                 <div id="unitTextContainer" class="relative">
                   <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <i class="fa-solid fa-landmark text-xs"></i>
@@ -479,7 +501,17 @@
                 </select>
               </div>
 
-              <!-- 4. Logic Lọc Phòng Ban dành cho Công Văn Đi (Ẩn/Hiện động) -->
+              <!-- 4. Logic Lọc Nguồn Công văn Đến (Ẩn/Hiện động khi chọn Công văn Đến hoặc Tất cả) -->
+              <div id="statNguonDenFilterContainer" class="lg:col-span-3">
+                <label for="statNguonDen" class="block text-[11px] font-semibold text-slate-600 mb-1">Nguồn Công văn Đến:</label>
+                <select id="statNguonDen" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="Tất cả nguồn">Tất cả nguồn</option>
+                  <option value="UFM Cơ sở chính">UFM Cơ sở chính</option>
+                  <option value="Khác">Khác</option>
+                </select>
+              </div>
+
+              <!-- 5. Logic Lọc Phòng Ban dành cho Công Văn Đi (Ẩn/Hiện động) -->
               <div id="statDeptFilterContainer" class="lg:col-span-3 hidden">
                 <label for="statPhongBan" class="block text-[11px] font-semibold text-slate-600 mb-1">Phòng ban ban hành:</label>
                 <select id="statPhongBan" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 truncate">
