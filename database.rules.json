@@ -1,0 +1,14 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "cong_van": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "users": {
+      ".read": "auth != null && auth.token.role === 'quantri'",
+      ".write": "auth != null && auth.token.role === 'quantri'"
+    }
+  }
+}
