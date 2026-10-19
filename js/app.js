@@ -635,6 +635,9 @@ if (form) {
     try {
       let mainDocId = currentEditId;
 
+      const isDen = loai_cong_van === "Công văn Đến";
+      const targetSubnode = isDen ? "cong_van/cong_van_den" : "cong_van/cong_van_di";
+
       if (mainDocId) {
         if (currentDoc && currentDoc.is_subnode_den) {
           const itemRef = ref(database, `cong_van/cong_van_den/${mainDocId}`);
@@ -643,21 +646,14 @@ if (form) {
           const itemRef = ref(database, `cong_van/cong_van_di/${mainDocId}`);
           await update(itemRef, dispatchData);
         } else {
-          const itemRef = ref(database, `cong_van/${mainDocId}`);
+          const itemRef = ref(database, `${targetSubnode}/${mainDocId}`);
           await update(itemRef, dispatchData);
         }
       } else {
-        if (loai_cong_van === "Công văn Đến") {
-          const denListRef = ref(database, "cong_van/cong_van_den");
-          const newRef = push(denListRef);
-          mainDocId = newRef.key;
-          await set(newRef, dispatchData);
-        } else {
-          const diListRef = ref(database, "cong_van/cong_van_di");
-          const newRef = push(diListRef);
-          mainDocId = newRef.key;
-          await set(newRef, dispatchData);
-        }
+        const listRef = ref(database, targetSubnode);
+        const newRef = push(listRef);
+        mainDocId = newRef.key;
+        await set(newRef, dispatchData);
       }
 
       // Logic xử lý Công văn phản hồi (đồng thời ghi nhận vào Công văn Đến tại node /cong_van/cong_van_den/)
@@ -694,14 +690,14 @@ if (form) {
         }
 
         // Lưu mã ID liên kết giữa Công văn đi (response_doc_id)
-        await update(ref(database, `cong_van/${mainDocId}`), {
+        await update(ref(database, `cong_van/cong_van_di/${mainDocId}`), {
           response_doc_id: responseDocId
         });
       } else if (currentDoc && currentDoc.response_doc_id && loai_cong_van === "Công văn Đi") {
         // Nếu trước đó có công văn phản hồi nhưng người dùng bỏ chọn checkbox
         try {
           await remove(ref(database, `cong_van/cong_van_den/${currentDoc.response_doc_id}`));
-          await update(ref(database, `cong_van/${mainDocId}`), {
+          await update(ref(database, `cong_van/cong_van_di/${mainDocId}`), {
             response_doc_id: null
           });
         } catch (e) {
@@ -819,22 +815,17 @@ window.deleteDispatch = async function(id) {
 
   if (confirm(`Bạn có chắc chắn muốn xóa công văn số "${item.so_ky_hieu}"?`)) {
     try {
-      if (item.is_subnode_den) {
-        const itemRef = ref(database, `cong_van/cong_van_den/${id}`);
-        await remove(itemRef);
-      } else if (item.is_subnode_di) {
-        const itemRef = ref(database, `cong_van/cong_van_di/${id}`);
-        await remove(itemRef);
-      } else {
-        const itemRef = ref(database, `cong_van/${id}`);
-        await remove(itemRef);
-        // Clean up linked response document if exists
-        if (item.response_doc_id) {
-          try {
-            await remove(ref(database, `cong_van/cong_van_den/${item.response_doc_id}`));
-          } catch (err) {
-            console.error("Error removing linked response doc on delete:", err);
-          }
+      const isDen = isCongVanDen(item.loai_cong_van);
+      const subpath = isDen ? "cong_van/cong_van_den" : "cong_van/cong_van_di";
+      const itemRef = ref(database, `${subpath}/${id}`);
+      await remove(itemRef);
+
+      // Clean up linked response document if exists
+      if (item.response_doc_id) {
+        try {
+          await remove(ref(database, `cong_van/cong_van_den/${item.response_doc_id}`));
+        } catch (err) {
+          console.error("Error removing linked response doc on delete:", err);
         }
       }
       showNotification("Xóa công văn thành công!");
@@ -1411,48 +1402,74 @@ function exportToExcel() {
       return;
     }
 
-    // Map dispatches to readable Vietnamese columns
-    const exportData = allDispatches.map((item, index) => {
-      let createdDateFormatted = "";
-      if (item.created_at) {
-        const d = new Date(item.created_at);
-        createdDateFormatted = d.toLocaleString("vi-VN");
+    const headers = [
+      "Số / Ký hiệu",
+      "Phân loại",
+      "Loại văn bản",
+      "Đơn vị ban hành",
+      "Ngày ban hành",
+      "Trích yếu nội dung",
+      "Link đính kèm"
+    ];
+
+    const exportData = allDispatches.map((item) => {
+      let displayLoai = "CV đi";
+      if (isCongVanDen(item.loai_cong_van)) {
+        displayLoai = "CV đến";
+      } else if (isCongVanDi(item.loai_cong_van)) {
+        displayLoai = "CV đi";
+      } else {
+        displayLoai = item.loai_cong_van || "CV đi";
       }
 
+      const coQuan = item.co_quan_ban_hanh || item.phong_ban || "";
+      const linkDrive = item.link_google_drive || item.drive_link || "";
+
       return {
-        "STT": index + 1,
         "Số / Ký hiệu": item.so_ky_hieu || "",
-        "Phân loại": item.loai_cong_van || "",
+        "Phân loại": displayLoai,
         "Loại văn bản": item.loai_van_ban || "",
-        "Đơn vị / Phòng ban": item.phong_ban || "",
+        "Đơn vị ban hành": coQuan,
         "Ngày ban hành": formatDate(item.ngay_ban_hanh),
         "Trích yếu nội dung": item.trich_yeu || "",
-        "Link đính kèm (Drive)": item.drive_link || "",
-        "Thời gian tạo": createdDateFormatted
+        "Link đính kèm": linkDrive
       };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const worksheet = XLSX.utils.json_to_sheet(exportData, { header: headers });
+
+    // Header row styling / prominence
+    worksheet["!rows"] = [{ hpt: 26 }];
 
     // Auto-fit column widths
-    const colWidths = [
-      { wch: 6 },  // STT
-      { wch: 20 }, // Số / Ký hiệu
-      { wch: 16 }, // Phân loại
-      { wch: 20 }, // Loại văn bản
-      { wch: 30 }, // Đơn vị / Phòng ban
-      { wch: 15 }, // Ngày ban hành
-      { wch: 50 }, // Trích yếu nội dung
-      { wch: 40 }, // Link đính kèm
-      { wch: 22 }  // Thời gian tạo
-    ];
+    const colWidths = headers.map(header => ({ wch: Math.max(header.length + 4, 15) }));
+
+    exportData.forEach((row, idx) => {
+      const rowNum = idx + 2;
+      headers.forEach((header, colIdx) => {
+        const val = row[header] ? String(row[header]) : "";
+        if (val.length + 3 > colWidths[colIdx].wch) {
+          colWidths[colIdx].wch = Math.min(val.length + 3, 60);
+        }
+      });
+
+      // Hyperlink for 'Link đính kèm' (Column G)
+      const linkUrl = row["Link đính kèm"];
+      if (linkUrl && (linkUrl.startsWith("http://") || linkUrl.startsWith("https://"))) {
+        const cellRef = "G" + rowNum;
+        if (worksheet[cellRef]) {
+          worksheet[cellRef].l = { Target: linkUrl, Tooltip: linkUrl };
+        }
+      }
+    });
+
     worksheet["!cols"] = colWidths;
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sach Cong van");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách Công văn");
 
     const todayStr = new Date().toISOString().split("T")[0];
-    const fileName = `Backup_CongVan_UFM_${todayStr}.xlsx`;
+    const fileName = `Danh_sach_cong_van_${todayStr}.xlsx`;
 
     XLSX.writeFile(workbook, fileName);
     showNotification(`Đã xuất file Excel "${fileName}" thành công!`);
@@ -1688,15 +1705,13 @@ async function handleExcelImport(e) {
   try {
     const dataObj = await file.arrayBuffer();
     const workbook = XLSX.read(dataObj, { type: "array" });
-    const firstSheetName = workbook.SheetNames[0]; // Sheet đầu tiên ("Công văn đi")
-    const worksheet = workbook.Sheets[firstSheetName];
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    // Xác định dòng tiêu đề cột ("Số / Ký hiệu") nếu có các dòng trang trí/tiêu đề ở đầu sheet
-    const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-    let headerRowIndex = matrix.findIndex(r => Array.isArray(r) && r.includes("Số / Ký hiệu"));
+    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    let headerRowIndex = matrix.findIndex(r => Array.isArray(r) && (r.includes("Số / Ký hiệu") || r.includes("So / Ky hieu")));
     if (headerRowIndex === -1) headerRowIndex = 0;
 
-    const rawJsonArray = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
+    const rawJsonArray = XLSX.utils.sheet_to_json(sheet, { range: headerRowIndex });
 
     if (!rawJsonArray || rawJsonArray.length === 0) {
       alert("Tệp Excel không có dữ liệu!");
@@ -1705,36 +1720,50 @@ async function handleExcelImport(e) {
     }
 
     const mappedData = rawJsonArray.map(row => {
-      const coPhanHoiVal = String(row["Có phản hồi"] || "").trim().toLowerCase();
-      const has_response = coPhanHoiVal === "có" || coPhanHoiVal === "co" || coPhanHoiVal === "true";
+      const rawLoai = String(row["Phân loại"] || row["Loại CV"] || "").trim();
+      let loai_cong_van = "CongVanDi";
+      if (rawLoai.toLowerCase().includes("đến") || rawLoai.toLowerCase().includes("den") || rawLoai === "CongVanDen") {
+        loai_cong_van = "CongVanDen";
+      } else if (rawLoai.toLowerCase().includes("đi") || rawLoai.toLowerCase().includes("di") || rawLoai === "CongVanDi") {
+        loai_cong_van = "CongVanDi";
+      }
+
+      const coQuan = String(row["Đơn vị ban hành"] || row["Đơn vị / Phòng ban"] || "").trim();
+      const linkDrive = row["Link đính kèm"] || row["Link đính kèm (Drive)"] || row["Link Google Drive"] || "";
 
       return {
         so_ky_hieu: String(row["Số / Ký hiệu"] || "").trim(),
-        link_google_drive: row["Link Google Drive"] ? String(row["Link Google Drive"]).trim() : "",
-        ngay_ban_hanh: formatDateToYYYYMMDD(row["Ngày tháng văn bản"]),
+        loai_cong_van: loai_cong_van,
         loai_van_ban: String(row["Loại văn bản"] || "").trim(),
-        trich_yeu: String(row["Trích yếu nội dung văn bản"] || "").trim(),
-        has_response: has_response,
-        ghi_chu_phan_hoi: row["Ghi chú / Nội dung phản hồi"] ? String(row["Ghi chú / Nội dung phản hồi"]).trim() : "",
-        loai_cong_van: "CongVanDi"
+        co_quan_ban_hanh: coQuan,
+        phong_ban: coQuan,
+        ngay_ban_hanh: formatDateToYYYYMMDD(row["Ngày ban hành"] || row["Ngày tháng văn bản"]),
+        trich_yeu: String(row["Trích yếu nội dung"] || row["Trích yếu nội dung văn bản"] || "").trim(),
+        link_google_drive: String(linkDrive).trim(),
+        drive_link: String(linkDrive).trim(),
+        created_at: Date.now()
       };
     });
 
-    const confirmMessage = "Bạn có chắc chắn muốn import " + mappedData.length + " công văn vào Firebase?";
-    if (!confirm(confirmMessage)) {
-      e.target.value = "";
-      return;
+    for (const item of mappedData) {
+      if (isCongVanDen(item.loai_cong_van)) {
+        const denListRef = ref(database, "cong_van/cong_van_den");
+        const newRef = push(denListRef);
+        await set(newRef, item);
+      } else {
+        const diListRef = ref(database, "cong_van/cong_van_di");
+        const newRef = push(diListRef);
+        await set(newRef, item);
+      }
     }
-
-    // Đẩy trực tiếp mảng JSON thu được lên /cong_van/cong_van_di/
-    const targetRef = ref(database, "cong_van/cong_van_di");
-    await set(targetRef, mappedData);
 
     alert("Import thành công!");
 
-    // Làm mới danh sách
     if (typeof renderDispatchList === "function") {
       renderDispatchList();
+    }
+    if (typeof runStatistics === "function") {
+      runStatistics();
     }
   } catch (error) {
     console.error("Import Excel Error:", error);
