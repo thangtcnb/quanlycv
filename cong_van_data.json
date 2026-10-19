@@ -1,0 +1,38 @@
+[
+  {
+    "so_ky_hieu": "01/QĐ-UFM",
+    "link_google_drive": "https://drive.google.com/file/d/sample1",
+    "ngay_ban_hanh": "2024-01-15",
+    "loai_van_ban": "QUYẾT ĐỊNH",
+    "trich_yeu": "QUYẾT ĐỊNH Về việc ban hành quy chế quản lý và sử dụng công văn điện tử tại Trường Đại học Tài chính - Marketing",
+    "has_response": false,
+    "ghi_chu_phan_hoi": "",
+    "loai_cong_van": "CongVanDi",
+    "phong_ban": "Phòng Hành chính - Tài vụ",
+    "created_at": 1705276800000
+  },
+  {
+    "so_ky_hieu": "02/TB-UFM",
+    "link_google_drive": "https://drive.google.com/file/d/sample2",
+    "ngay_ban_hanh": "2024-02-10",
+    "loai_van_ban": "THÔNG BÁO",
+    "trich_yeu": "THÔNG BÁO Về việc kế hoạch tổ chức hội nghị cán bộ công chức viên chức năm 2024",
+    "has_response": true,
+    "ghi_chu_phan_hoi": "Đã tiếp nhận và chuẩn bị danh sách tham dự từ các đơn vị",
+    "loai_cong_van": "CongVanDi",
+    "phong_ban": "Phòng Đào tạo - Khoa học và QLSV",
+    "created_at": 1707523200000
+  },
+  {
+    "so_ky_hieu": "03/KH-UFM",
+    "link_google_drive": "",
+    "ngay_ban_hanh": "2024-03-05",
+    "loai_van_ban": "KẾ HOẠCH",
+    "trich_yeu": "KẾ HOẠCH Triển khai hoạt động nghiên cứu khoa học và quản lý sinh viên kỳ 1",
+    "has_response": false,
+    "ghi_chu_phan_hoi": "",
+    "loai_cong_van": "CongVanDi",
+    "phong_ban": "Phòng Đào tạo - Khoa học và QLSV",
+    "created_at": 1709596800000
+  }
+]
