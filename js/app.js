@@ -87,6 +87,9 @@ const dispatchIdInput = document.getElementById("dispatchId");
 const soKyHieuInput = document.getElementById("soKyHieu");
 const loaiCongVanInput = document.getElementById("loaiCongVan");
 
+const nguonCongVanContainer = document.getElementById("nguonCongVanContainer");
+const nguonCongVanSelect = document.getElementById("nguonCongVan");
+
 const unitLabel = document.getElementById("unitLabel");
 const unitTextContainer = document.getElementById("unitTextContainer");
 const unitInputText = document.getElementById("unitInputText");
@@ -131,6 +134,8 @@ const paginationControls = document.getElementById("paginationControls");
 const statStartDate = document.getElementById("statStartDate");
 const statEndDate = document.getElementById("statEndDate");
 const statLoaiCongVan = document.getElementById("statLoaiCongVan");
+const statNguonDenFilterContainer = document.getElementById("statNguonDenFilterContainer");
+const statNguonDenSelect = document.getElementById("statNguonDen");
 const statDeptFilterContainer = document.getElementById("statDeptFilterContainer");
 const statPhongBan = document.getElementById("statPhongBan");
 const btnStatFilter = document.getElementById("btnStatFilter");
@@ -418,12 +423,25 @@ function updateDynamicUnitField() {
   const isDen = loaiCongVanInput.value === "Công văn Đến";
 
   if (isDen) {
-    unitLabel.innerHTML = `Nơi ban hành công văn <span class="text-rose-500">*</span>`;
-    unitTextContainer.classList.remove("hidden");
+    if (nguonCongVanContainer) nguonCongVanContainer.classList.remove("hidden");
     unitSelectContainer.classList.add("hidden");
-
-    unitInputText.setAttribute("required", "true");
     unitSelectBox.removeAttribute("required");
+
+    const isUFM = nguonCongVanSelect && nguonCongVanSelect.value === "UFM Cơ sở chính";
+
+    if (isUFM) {
+      unitLabel.innerHTML = `Đơn vị ban hành <span class="text-rose-500">*</span>`;
+      unitTextContainer.classList.add("hidden");
+      unitInputText.value = "UFM Cơ sở chính";
+      unitInputText.removeAttribute("required");
+    } else {
+      unitLabel.innerHTML = `Đơn vị ban hành <span class="text-rose-500">*</span>`;
+      unitTextContainer.classList.remove("hidden");
+      if (unitInputText.value === "UFM Cơ sở chính") {
+        unitInputText.value = "";
+      }
+      unitInputText.setAttribute("required", "true");
+    }
 
     // Hide response section for incoming documents
     if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.add("hidden");
@@ -431,6 +449,7 @@ function updateDynamicUnitField() {
     if (hasResponseDocInput) hasResponseDocInput.checked = false;
     toggleResponseDocFields(false);
   } else {
+    if (nguonCongVanContainer) nguonCongVanContainer.classList.add("hidden");
     unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
     unitTextContainer.classList.add("hidden");
     unitSelectContainer.classList.remove("hidden");
@@ -475,9 +494,16 @@ if (loaiCongVanInput) {
   loaiCongVanInput.addEventListener("change", updateDynamicUnitField);
 }
 
+if (nguonCongVanSelect) {
+  nguonCongVanSelect.addEventListener("change", updateDynamicUnitField);
+}
+
 // Get Unit value according to document type
 function getUnitValue() {
   if (loaiCongVanInput.value === "Công văn Đến") {
+    if (nguonCongVanSelect && nguonCongVanSelect.value === "UFM Cơ sở chính") {
+      return "UFM Cơ sở chính";
+    }
     return unitInputText.value.trim();
   } else {
     return unitSelectBox.value;
@@ -529,6 +555,10 @@ if (form) {
       created_at: currentDoc ? (currentDoc.created_at || Date.now()) : Date.now()
     };
 
+    if (loai_cong_van === "Công văn Đến") {
+      dispatchData.nguon_cong_van = nguonCongVanSelect ? nguonCongVanSelect.value : "Khác";
+    }
+
     if (currentDoc && currentDoc.response_doc_id) {
       dispatchData.response_doc_id = currentDoc.response_doc_id;
     }
@@ -540,13 +570,25 @@ if (form) {
       let mainDocId = currentEditId;
 
       if (mainDocId) {
-        const itemRef = ref(database, `cong_van/${mainDocId}`);
-        await update(itemRef, dispatchData);
+        if (currentDoc && currentDoc.is_subnode_den) {
+          const itemRef = ref(database, `cong_van/cong_van_den/${mainDocId}`);
+          await update(itemRef, dispatchData);
+        } else {
+          const itemRef = ref(database, `cong_van/${mainDocId}`);
+          await update(itemRef, dispatchData);
+        }
       } else {
-        const congVanRef = ref(database, "cong_van");
-        const newRef = push(congVanRef);
-        mainDocId = newRef.key;
-        await set(newRef, dispatchData);
+        if (loai_cong_van === "Công văn Đến") {
+          const denListRef = ref(database, "cong_van/cong_van_den");
+          const newRef = push(denListRef);
+          mainDocId = newRef.key;
+          await set(newRef, dispatchData);
+        } else {
+          const congVanRef = ref(database, "cong_van");
+          const newRef = push(congVanRef);
+          mainDocId = newRef.key;
+          await set(newRef, dispatchData);
+        }
       }
 
       // Logic xử lý Công văn phản hồi (đồng thời ghi nhận vào Công văn Đến tại node /cong_van/cong_van_den/)
@@ -560,6 +602,7 @@ if (form) {
         const responseRecordData = {
           so_ky_hieu: respSoKyHieu,
           loai_cong_van: "Công văn Đến",
+          nguon_cong_van: respCoQuan === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác",
           loai_van_ban: "Công văn phản hồi",
           phong_ban: respCoQuan,
           ngay_ban_hanh: respNgayBH,
@@ -623,6 +666,7 @@ function resetForm() {
   cancelEditBtn.classList.add("hidden");
 
   loaiCongVanInput.value = "Công văn Đến";
+  if (nguonCongVanSelect) nguonCongVanSelect.value = "UFM Cơ sở chính";
   if (hasResponseDocInput) hasResponseDocInput.checked = false;
   if (responseSoKyHieuInput) responseSoKyHieuInput.value = "";
   if (responseNgayBanHanhInput) responseNgayBanHanhInput.value = "";
@@ -654,7 +698,14 @@ window.editDispatch = function(id) {
   updateDynamicUnitField();
 
   if (item.loai_cong_van === "Công văn Đến") {
-    unitInputText.value = item.phong_ban || "";
+    const nguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
+    if (nguonCongVanSelect) nguonCongVanSelect.value = nguon;
+    updateDynamicUnitField();
+    if (nguon === "Khác") {
+      unitInputText.value = item.phong_ban || "";
+    } else {
+      unitInputText.value = "UFM Cơ sở chính";
+    }
   } else {
     unitSelectBox.value = item.phong_ban || "Phòng Hành chính - Tài vụ";
   }
@@ -998,9 +1049,18 @@ if (filterLoaiCongVan) {
 // -------------------------------------------------------------
 function updateStatDeptFilterVisibility() {
   if (!statLoaiCongVan) return;
+
   if (statLoaiCongVan.value === "Công văn Đi") {
+    if (statNguonDenFilterContainer) statNguonDenFilterContainer.classList.add("hidden");
     if (statDeptFilterContainer) statDeptFilterContainer.classList.remove("hidden");
+    if (statNguonDenSelect) statNguonDenSelect.value = "Tất cả nguồn";
+  } else if (statLoaiCongVan.value === "Công văn Đến") {
+    if (statNguonDenFilterContainer) statNguonDenFilterContainer.classList.remove("hidden");
+    if (statDeptFilterContainer) statDeptFilterContainer.classList.add("hidden");
+    if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
   } else {
+    // Tất cả
+    if (statNguonDenFilterContainer) statNguonDenFilterContainer.classList.remove("hidden");
     if (statDeptFilterContainer) statDeptFilterContainer.classList.add("hidden");
     if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
   }
@@ -1014,6 +1074,7 @@ function runStatistics() {
   const startDate = statStartDate ? statStartDate.value : "";
   const endDate = statEndDate ? statEndDate.value : "";
   const selectedLoai = statLoaiCongVan ? statLoaiCongVan.value : "Tất cả";
+  const selectedNguonDen = statNguonDenSelect ? statNguonDenSelect.value : "Tất cả nguồn";
   const selectedDept = statPhongBan ? statPhongBan.value : "Tất cả phòng ban";
 
   let filtered = [...allDispatches];
@@ -1026,6 +1087,13 @@ function runStatistics() {
   }
   if (selectedLoai !== "Tất cả") {
     filtered = filtered.filter(item => item.loai_cong_van === selectedLoai);
+  }
+  if (selectedNguonDen !== "Tất cả nguồn") {
+    filtered = filtered.filter(item => {
+      if (item.loai_cong_van !== "Công văn Đến") return false;
+      const itemNguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
+      return itemNguon === selectedNguonDen;
+    });
   }
   if (selectedLoai === "Công văn Đi" && selectedDept !== "Tất cả phòng ban") {
     filtered = filtered.filter(item => item.phong_ban === selectedDept);
@@ -1190,6 +1258,7 @@ if (btnStatReset) {
     if (statStartDate) statStartDate.value = "";
     if (statEndDate) statEndDate.value = "";
     if (statLoaiCongVan) statLoaiCongVan.value = "Tất cả";
+    if (statNguonDenSelect) statNguonDenSelect.value = "Tất cả nguồn";
     if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
     updateStatDeptFilterVisibility();
     runStatistics();
