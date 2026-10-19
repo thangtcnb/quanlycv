@@ -133,6 +133,15 @@ const totalItemsBadge = document.getElementById("totalItemsBadge");
 const paginationInfo = document.getElementById("paginationInfo");
 const paginationControls = document.getElementById("paginationControls");
 
+// DOM Elements - Batch Action Toolbar
+const batchActionToolbar = document.getElementById("batchActionToolbar");
+const selectedCountText = document.getElementById("selectedCountText");
+const btnBatchDelete = document.getElementById("btnBatchDelete");
+
+const statBatchActionToolbar = document.getElementById("statBatchActionToolbar");
+const statSelectedCountText = document.getElementById("statSelectedCountText");
+const btnStatBatchDelete = document.getElementById("btnStatBatchDelete");
+
 // DOM Elements - Statistics
 const statStartDate = document.getElementById("statStartDate");
 const statEndDate = document.getElementById("statEndDate");
@@ -349,6 +358,9 @@ function applyRolePermissions() {
     // Hide Backup elements
     if (headerBackupContainer) headerBackupContainer.classList.add("hidden");
     if (backupSection) backupSection.classList.add("hidden");
+    // Hide Batch Action Toolbars
+    if (batchActionToolbar) batchActionToolbar.classList.add("hidden");
+    if (statBatchActionToolbar) statBatchActionToolbar.classList.add("hidden");
   } else if (currentRole === "quantri") {
     // Show Form column
     if (formColumnContainer) formColumnContainer.classList.remove("hidden");
@@ -361,6 +373,9 @@ function applyRolePermissions() {
     // Show Backup elements for quantri
     if (headerBackupContainer) headerBackupContainer.classList.remove("hidden");
     if (backupSection) backupSection.classList.remove("hidden");
+    // Show Batch Action Toolbars for quantri
+    if (batchActionToolbar) batchActionToolbar.classList.remove("hidden");
+    if (statBatchActionToolbar) statBatchActionToolbar.classList.remove("hidden");
   } else {
     // Default vanthu role: Show Form column, Hide User Management tab
     if (formColumnContainer) formColumnContainer.classList.remove("hidden");
@@ -372,6 +387,9 @@ function applyRolePermissions() {
     // Hide Backup elements
     if (headerBackupContainer) headerBackupContainer.classList.add("hidden");
     if (backupSection) backupSection.classList.add("hidden");
+    // Hide Batch Action Toolbars
+    if (batchActionToolbar) batchActionToolbar.classList.add("hidden");
+    if (statBatchActionToolbar) statBatchActionToolbar.classList.add("hidden");
   }
 
   renderDispatchList();
@@ -991,9 +1009,79 @@ function getFilteredDispatches() {
   });
 }
 
+// Helper functions requested
+window.loadDanhSachCongVan = function() {
+  renderDispatchList();
+};
+
+window.updateThongKe = function() {
+  runStatistics();
+};
+
+// Render Table Header according to role
+function updateTableHeaders() {
+  const tableHeaderRow = document.querySelector("#dispatchTableBody")?.parentElement?.querySelector("thead tr");
+  if (tableHeaderRow) {
+    if (currentRole === "quantri") {
+      tableHeaderRow.innerHTML = `
+        <th class="px-2 py-3 text-center w-[3%]"><input type="checkbox" id="selectAllCongVan" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"></th>
+        <th class="px-2.5 py-3 text-center w-[4%]">#</th>
+        <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
+        <th class="px-2.5 py-3 w-[15%]">Đơn vị / Phòng ban</th>
+        <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
+        <th class="px-2.5 py-3 w-[31%]">Trích yếu nội dung</th>
+        <th class="px-2.5 py-3 text-center w-[6%]">File</th>
+      `;
+    } else {
+      tableHeaderRow.innerHTML = `
+        <th class="px-2.5 py-3 text-center w-[4%]">#</th>
+        <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
+        <th class="px-2.5 py-3 w-[15%]">Đơn vị / Phòng ban</th>
+        <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
+        <th class="px-2.5 py-3 w-[34%]">Trích yếu nội dung</th>
+        <th class="px-2.5 py-3 text-center w-[6%]">File</th>
+      `;
+    }
+  }
+
+  const statHeaderRow = document.querySelector("#statDetailTableBody")?.parentElement?.querySelector("thead tr");
+  if (statHeaderRow) {
+    if (currentRole === "quantri") {
+      statHeaderRow.innerHTML = `
+        <th class="px-2 py-3 text-center w-[3%]"><input type="checkbox" id="statSelectAllCongVan" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"></th>
+        <th class="px-3 py-3 text-center w-[4%]">#</th>
+        <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-3 py-3 w-[10%]">Phân loại</th>
+        <th class="px-3 py-3 w-[10%]">Loại VB</th>
+        <th class="px-3 py-3 w-[15%]">Nơi ban hành / Phòng ban</th>
+        <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
+        <th class="px-3 py-3 w-[31%]">Trích yếu nội dung</th>
+        <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
+      `;
+    } else {
+      statHeaderRow.innerHTML = `
+        <th class="px-3 py-3 text-center w-[4%]">#</th>
+        <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-3 py-3 w-[10%]">Phân loại</th>
+        <th class="px-3 py-3 w-[10%]">Loại VB</th>
+        <th class="px-3 py-3 w-[15%]">Nơi ban hành / Phòng ban</th>
+        <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
+        <th class="px-3 py-3 w-[34%]">Trích yếu nội dung</th>
+        <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
+      `;
+    }
+  }
+}
+
 // Render Table with Pagination (Max 20 per page)
 function renderDispatchList() {
   if (!dispatchTableBody) return;
+  updateTableHeaders();
+
   const filtered = getFilteredDispatches();
   if (totalItemsBadge) {
     totalItemsBadge.textContent = `${filtered.length} / ${allDispatches.length} văn bản`;
@@ -1008,10 +1096,12 @@ function renderDispatchList() {
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
   const currentItems = filtered.slice(startIndex, endIndex);
 
+  const colSpanCount = currentRole === "quantri" ? 9 : 8;
+
   if (filtered.length === 0) {
     dispatchTableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="px-4 py-12 text-center text-slate-400">
+        <td colspan="${colSpanCount}" class="px-4 py-12 text-center text-slate-400">
           <i class="fa-regular fa-folder-open text-3xl mb-2 block"></i>
           Không tìm thấy công văn nào phù hợp.
         </td>
@@ -1019,6 +1109,7 @@ function renderDispatchList() {
     `;
     if (paginationInfo) paginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 văn bản";
     if (paginationControls) paginationControls.innerHTML = "";
+    updateBatchDeleteToolbarState();
     return;
   }
 
@@ -1034,8 +1125,15 @@ function renderDispatchList() {
     const canEdit = currentRole !== "quanly";
     const hasResponse = isCongVanDi(item.loai_cong_van) && item.response_doc_id;
 
+    const checkboxCell = currentRole === "quantri" ? `
+      <td class="px-2 py-3 text-center">
+        <input type="checkbox" class="select-cv-item w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" data-id="${item.id}" data-type="${escapeHtml(item.loai_cong_van)}">
+      </td>
+    ` : "";
+
     return `
       <tr id="row-${item.id}" class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+        ${checkboxCell}
         <td class="px-2.5 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
         <td class="px-2.5 py-3 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
@@ -1098,6 +1196,11 @@ function renderDispatchList() {
     paginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filtered.length} văn bản`;
   }
 
+  // Reset selectAll checkbox state when re-rendering table
+  const selectAllCb = document.getElementById("selectAllCongVan");
+  if (selectAllCb) selectAllCb.checked = false;
+
+  updateBatchDeleteToolbarState();
   renderPaginationControls(totalPages);
 }
 
@@ -1152,6 +1255,154 @@ if (filterLoaiCongVan) {
   filterLoaiCongVan.addEventListener("change", () => {
     currentPage = 1;
     renderDispatchList();
+  });
+}
+
+// -------------------------------------------------------------
+// BATCH DELETE & CHECKBOX HANDLING LOGIC (quantri ONLY)
+// -------------------------------------------------------------
+function updateBatchDeleteToolbarState() {
+  if (currentRole !== "quantri") return;
+
+  // Active tab check: Home list table vs Stat detail table
+  const homeTabActive = tabHomeContent && !tabHomeContent.classList.contains("hidden");
+
+  if (homeTabActive) {
+    const tableBody = document.getElementById("dispatchTableBody");
+    if (!tableBody) return;
+    const checkboxes = Array.from(tableBody.querySelectorAll(".select-cv-item"));
+    const selectedBoxes = checkboxes.filter(cb => cb.checked);
+    const count = selectedBoxes.length;
+
+    if (selectedCountText) {
+      selectedCountText.textContent = `Đã chọn: ${count} văn bản`;
+    }
+
+    if (btnBatchDelete) {
+      btnBatchDelete.disabled = count === 0;
+    }
+
+    const selectAllCb = document.getElementById("selectAllCongVan");
+    if (selectAllCb) {
+      selectAllCb.checked = checkboxes.length > 0 && checkboxes.every(cb => cb.checked);
+    }
+  } else {
+    const statTableBody = document.getElementById("statDetailTableBody");
+    if (!statTableBody) return;
+    const checkboxes = Array.from(statTableBody.querySelectorAll(".select-cv-item"));
+    const selectedBoxes = checkboxes.filter(cb => cb.checked);
+    const count = selectedBoxes.length;
+
+    if (statSelectedCountText) {
+      statSelectedCountText.textContent = `Đã chọn: ${count} văn bản`;
+    }
+
+    if (btnStatBatchDelete) {
+      btnStatBatchDelete.disabled = count === 0;
+    }
+
+    const statSelectAllCb = document.getElementById("statSelectAllCongVan");
+    if (statSelectAllCb) {
+      statSelectAllCb.checked = checkboxes.length > 0 && checkboxes.every(cb => cb.checked);
+    }
+  }
+}
+
+// Global Event Listeners for Select All and Checkbox Changes (Delegated)
+document.addEventListener("change", (e) => {
+  if (e.target && e.target.id === "selectAllCongVan") {
+    const isChecked = e.target.checked;
+    const tableBody = document.getElementById("dispatchTableBody");
+    if (tableBody) {
+      const checkboxes = tableBody.querySelectorAll(".select-cv-item");
+      checkboxes.forEach(cb => { cb.checked = isChecked; });
+    }
+    updateBatchDeleteToolbarState();
+  } else if (e.target && e.target.id === "statSelectAllCongVan") {
+    const isChecked = e.target.checked;
+    const statTableBody = document.getElementById("statDetailTableBody");
+    if (statTableBody) {
+      const checkboxes = statTableBody.querySelectorAll(".select-cv-item");
+      checkboxes.forEach(cb => { cb.checked = isChecked; });
+    }
+    updateBatchDeleteToolbarState();
+  } else if (e.target && e.target.classList && e.target.classList.contains("select-cv-item")) {
+    updateBatchDeleteToolbarState();
+  }
+});
+
+async function executeBatchDelete(tableBodyId, selectAllId) {
+  if (currentRole !== "quantri") {
+    alert("Bạn không có quyền thực hiện thao tác xóa!");
+    return;
+  }
+
+  const tableBody = document.getElementById(tableBodyId);
+  if (!tableBody) return;
+
+  const selectedCheckboxes = Array.from(tableBody.querySelectorAll(".select-cv-item:checked"));
+  const count = selectedCheckboxes.length;
+
+  if (count === 0) {
+    alert("Vui lòng chọn ít nhất 1 công văn để xóa!");
+    return;
+  }
+
+  const isConfirmed = confirm(`Bạn có chắc chắn muốn xóa ${count} công văn đã chọn không? Hành động này không thể hoàn tác!`);
+  if (!isConfirmed) return;
+
+  try {
+    const deletePromises = selectedCheckboxes.map(async (cb) => {
+      const id = cb.getAttribute("data-id");
+      const loai = cb.getAttribute("data-type");
+
+      const item = allDispatches.find(d => d.id === id);
+
+      const isDen = isCongVanDen(loai) || (item && isCongVanDen(item.loai_cong_van));
+      const subpath = isDen ? "cong_van/cong_van_den" : "cong_van/cong_van_di";
+
+      const itemRef = ref(database, `${subpath}/${id}`);
+      await remove(itemRef);
+
+      // Clean up linked response document if exists
+      if (item && item.response_doc_id) {
+        try {
+          await remove(ref(database, `cong_van/cong_van_den/${item.response_doc_id}`));
+        } catch (err) {
+          console.error("Error removing linked response doc on batch delete:", err);
+        }
+      }
+    });
+
+    await Promise.all(deletePromises);
+
+    alert(`Đã xóa thành công ${count} công văn!`);
+
+    const selectAllCb = document.getElementById(selectAllId);
+    if (selectAllCb) selectAllCb.checked = false;
+
+    // Call loadDanhSachCongVan and updateThongKe
+    if (typeof window.loadDanhSachCongVan === "function") {
+      window.loadDanhSachCongVan();
+    }
+    if (typeof window.updateThongKe === "function") {
+      window.updateThongKe();
+    }
+  } catch (error) {
+    console.error("Batch Delete Error:", error);
+    alert("Lỗi khi xóa hàng loạt công văn: " + error.message);
+  }
+}
+
+if (btnBatchDelete) {
+  btnBatchDelete.addEventListener("click", () => {
+    executeBatchDelete("dispatchTableBody", "selectAllCongVan");
+  });
+}
+
+if (btnStatBatchDelete) {
+  btnStatBatchDelete.addEventListener("click", () => {
+    executeBatchDelete("statDetailTableBody", "statSelectAllCongVan");
   });
 }
 
@@ -1251,16 +1502,19 @@ function renderStatDetailTable() {
   const endIndex = Math.min(startIndex + statItemsPerPage, filteredItems.length);
   const currentItems = filteredItems.slice(startIndex, endIndex);
 
+  const colSpanCount = currentRole === "quantri" ? 9 : 8;
+
   if (filteredItems.length === 0) {
     statDetailTableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+        <td colspan="${colSpanCount}" class="px-4 py-8 text-center text-slate-400">
           Không có công văn nào phù hợp với bộ lọc thống kê.
         </td>
       </tr>
     `;
     if (statPaginationInfo) statPaginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 bản ghi";
     if (statPaginationControls) statPaginationControls.innerHTML = "";
+    updateBatchDeleteToolbarState();
     return;
   }
 
@@ -1273,8 +1527,15 @@ function renderStatDetailTable() {
     const hasDriveLink = driveUrl && driveUrl.trim() !== "";
     const hasResponse = isCongVanDi(item.loai_cong_van) && item.response_doc_id;
 
+    const checkboxCell = currentRole === "quantri" ? `
+      <td class="px-2 py-3 text-center">
+        <input type="checkbox" class="select-cv-item w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" data-id="${item.id}" data-type="${escapeHtml(item.loai_cong_van)}">
+      </td>
+    ` : "";
+
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+        ${checkboxCell}
         <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${startIndex + index + 1}</td>
         <td class="px-3 py-2.5 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
@@ -1318,6 +1579,11 @@ function renderStatDetailTable() {
     statPaginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filteredItems.length} bản ghi`;
   }
 
+  // Reset stat selectAll checkbox state when re-rendering table
+  const statSelectAllCb = document.getElementById("statSelectAllCongVan");
+  if (statSelectAllCb) statSelectAllCb.checked = false;
+
+  updateBatchDeleteToolbarState();
   renderStatPaginationControls(totalPages);
 }
 
