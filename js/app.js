@@ -154,6 +154,8 @@ const statNguonDenFilterContainer = document.getElementById("statNguonDenFilterC
 const statNguonDenSelect = document.getElementById("statNguonDen");
 const statDeptFilterContainer = document.getElementById("statDeptFilterContainer");
 const statPhongBan = document.getElementById("statPhongBan");
+const statSubDeptFilterContainer = document.getElementById("statSubDeptFilterContainer");
+const statDonViChiTiet = document.getElementById("statDonViChiTiet");
 const btnStatFilter = document.getElementById("btnStatFilter");
 const btnStatReset = document.getElementById("btnStatReset");
 const statDetailTableBody = document.getElementById("statDetailTableBody");
@@ -661,60 +663,66 @@ if (form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const so_ky_hieu = soKyHieuInput.value.trim();
-    const loai_cong_van = loaiCongVanInput.value;
-    const unitVal = getUnitValue();
-    const loai_van_ban = loaiVanBanInput.value.trim();
-    const ngay_ban_hanh = ngayBanHanhInput.value;
-    const trich_yeu = trichYeuInput.value.trim();
-    const drive_link = driveLinkInput.value.trim();
-    const ngay_den = ngayDenInput ? ngayDenInput.value : "";
+    try {
+      const so_ky_hieu = soKyHieuInput ? soKyHieuInput.value.trim() : "";
+      const loai_cong_van = loaiCongVanInput ? loaiCongVanInput.value : "";
+      const isDen = isCongVanDen(loai_cong_van);
+      const unitVal = getUnitValue();
+      const loai_van_ban = loaiVanBanInput ? loaiVanBanInput.value.trim() : "";
+      const ngay_ban_hanh = ngayBanHanhInput ? ngayBanHanhInput.value : "";
+      const trich_yeu = trichYeuInput ? trichYeuInput.value.trim() : "";
+      const drive_link = driveLinkInput ? driveLinkInput.value.trim() : "";
 
-    if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
-      showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
-      return;
-    }
+      const ngayDen = document.getElementById('ngay_den') ? document.getElementById('ngay_den').value : '';
+      const donViChiTiet = document.getElementById('don_vi_chi_tiet') ? document.getElementById('don_vi_chi_tiet').value : '';
 
-    const hasResponse = loai_cong_van === "Công văn Đi" && hasResponseDocInput && hasResponseDocInput.checked;
-
-    if (hasResponse) {
-      const respSoKyHieu = responseSoKyHieuInput ? responseSoKyHieuInput.value.trim() : "";
-      const respNgayBH = responseNgayBanHanhInput ? responseNgayBanHanhInput.value : "";
-      const respCoQuan = responseCoQuanBanHanhInput ? responseCoQuanBanHanhInput.value.trim() : "";
-      const respTrichYeu = responseTrichYeuInput ? responseTrichYeuInput.value.trim() : "";
-
-      if (!respSoKyHieu || !respNgayBH || !respCoQuan || !respTrichYeu) {
-        showNotification("Vui lòng nhập đầy đủ thông tin Công văn phản hồi!", "error");
+      if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
+        showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
+        alert("Vui lòng điền đầy đủ các thông tin bắt buộc!");
         return;
       }
-    }
 
-    const currentDoc = currentEditId ? allDispatches.find(item => item.id === currentEditId) : null;
+      const hasResponse = loai_cong_van === "Công văn Đi" && hasResponseDocInput && hasResponseDocInput.checked;
 
-    const dispatchData = {
-      so_ky_hieu,
-      loai_cong_van,
-      phong_ban: unitVal,
-      co_quan_ban_hanh: unitVal,
-      loai_van_ban,
-      ngay_ban_hanh,
-      trich_yeu,
-      drive_link,
-      link_google_drive: drive_link,
-      created_at: currentDoc ? (currentDoc.created_at || Date.now()) : Date.now()
-    };
+      if (hasResponse) {
+        const respSoKyHieu = responseSoKyHieuInput ? responseSoKyHieuInput.value.trim() : "";
+        const respNgayBH = responseNgayBanHanhInput ? responseNgayBanHanhInput.value : "";
+        const respCoQuan = responseCoQuanBanHanhInput ? responseCoQuanBanHanhInput.value.trim() : "";
+        const respTrichYeu = responseTrichYeuInput ? responseTrichYeuInput.value.trim() : "";
 
-    if (ngay_den) {
-      dispatchData.ngay_den = ngay_den;
-    }
-
-    if (isDen) {
-      dispatchData.nguon_cong_van = nguonCongVanSelect ? nguonCongVanSelect.value : "Khác";
-    } else {
-      if (subUnitContainer && !subUnitContainer.classList.contains("hidden") && subUnitSelectBox && subUnitSelectBox.value) {
-        dispatchData.don_vi_chi_tiet = subUnitSelectBox.value;
+        if (!respSoKyHieu || !respNgayBH || !respCoQuan || !respTrichYeu) {
+          showNotification("Vui lòng nhập đầy đủ thông tin Công văn phản hồi!", "error");
+          alert("Vui lòng nhập đầy đủ thông tin Công văn phản hồi!");
+          return;
+        }
       }
-    }
+
+      const currentDoc = currentEditId ? allDispatches.find(item => item.id === currentEditId) : null;
+
+      const dispatchData = {
+        so_ky_hieu,
+        loai_cong_van,
+        phong_ban: unitVal,
+        co_quan_ban_hanh: unitVal,
+        loai_van_ban,
+        ngay_ban_hanh,
+        trich_yeu,
+        drive_link,
+        link_google_drive: drive_link,
+        created_at: currentDoc ? (currentDoc.created_at || Date.now()) : Date.now()
+      };
+
+      if (ngayDen) {
+        dispatchData.ngay_den = ngayDen;
+      }
+
+      if (isDen) {
+        dispatchData.nguon_cong_van = nguonCongVanSelect ? nguonCongVanSelect.value : "Khác";
+      } else {
+        if (donViChiTiet) {
+          dispatchData.don_vi_chi_tiet = donViChiTiet;
+        }
+      }
 
     if (currentDoc && currentDoc.response_doc_id) {
       dispatchData.response_doc_id = currentDoc.response_doc_id;
@@ -801,11 +809,23 @@ if (form) {
     } catch (error) {
       console.error("Save error:", error);
       showNotification("Lỗi khi lưu công văn: " + error.message, "error");
+      alert("Lỗi khi lưu công văn: " + error.message);
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = currentEditId
         ? `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`
         : `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
+    }
+    } catch (outerError) {
+      console.error("Outer Form Submit error:", outerError);
+      showNotification("Lỗi hệ thống: " + outerError.message, "error");
+      alert("Lỗi hệ thống: " + outerError.message);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = currentEditId
+          ? `<i class="fa-solid fa-floppy-disk mr-2"></i> Cập nhật`
+          : `<i class="fa-solid fa-plus mr-2"></i> Lưu Công Văn`;
+      }
     }
   });
 }
@@ -853,8 +873,13 @@ window.editDispatch = function(id) {
 
   updateDynamicUnitField();
 
-  if (ngayDenInput) {
-    ngayDenInput.value = item.ngay_den || "";
+  const ngayDenEl = document.getElementById("ngay_den");
+  const ngayDenContainerEl = document.getElementById("ngayDenContainer");
+  if (ngayDenContainerEl) {
+    ngayDenContainerEl.classList.remove("hidden");
+  }
+  if (ngayDenEl) {
+    ngayDenEl.value = item.ngay_den || "";
   }
 
   if (isCongVanDen(item.loai_cong_van)) {
@@ -1248,7 +1273,8 @@ function renderDispatchList() {
           ${escapeHtml(item.loai_van_ban)}
         </td>
         <td class="px-2.5 py-3 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">
-          ${escapeHtml(displayUnitWithSub)}
+          <div>${escapeHtml(displayUnit)}</div>
+          ${item.don_vi_chi_tiet ? `<span class="badge bg-info text-dark" style="font-size: 0.75rem; margin-top: 2px; display: inline-block;">${escapeHtml(item.don_vi_chi_tiet)}</span>` : ""}
         </td>
         <td class="px-2.5 py-3 whitespace-nowrap text-slate-600">
           ${formatDateToVN(item.ngay_ban_hanh)}
@@ -1502,6 +1528,34 @@ if (btnStatBatchDelete) {
 // -------------------------------------------------------------
 // 4. TAB THỐNG KÊ & BẢNG CHI TIẾT CÔNG VĂN
 // -------------------------------------------------------------
+function updateStatSubDeptFilter() {
+  if (!statPhongBan || !statDonViChiTiet || !statSubDeptFilterContainer) return;
+  const mainDept = statPhongBan.value;
+  statDonViChiTiet.innerHTML = `<option value="Tất cả đơn vị chi tiết">Tất cả đơn vị chi tiết</option>`;
+
+  if (mainDept === "Phòng Hành chính - Tài vụ") {
+    statSubDeptFilterContainer.classList.remove("hidden");
+    const options = ["Hành chính", "Tài vụ", "Quản trị"];
+    options.forEach(opt => {
+      const optionEl = document.createElement("option");
+      optionEl.value = opt;
+      optionEl.textContent = opt;
+      statDonViChiTiet.appendChild(optionEl);
+    });
+  } else if (mainDept === "Phòng Đào tạo - Khoa học và QLSV") {
+    statSubDeptFilterContainer.classList.remove("hidden");
+    const options = ["Đào tạo", "Khoa học", "Quản lý Sinh viên"];
+    options.forEach(opt => {
+      const optionEl = document.createElement("option");
+      optionEl.value = opt;
+      optionEl.textContent = opt;
+      statDonViChiTiet.appendChild(optionEl);
+    });
+  } else {
+    statSubDeptFilterContainer.classList.add("hidden");
+  }
+}
+
 function updateStatDeptFilterVisibility() {
   if (!statLoaiCongVan) return;
 
@@ -1509,14 +1563,17 @@ function updateStatDeptFilterVisibility() {
     if (statNguonDenFilterContainer) statNguonDenFilterContainer.classList.add("hidden");
     if (statDeptFilterContainer) statDeptFilterContainer.classList.remove("hidden");
     if (statNguonDenSelect) statNguonDenSelect.value = "Tất cả nguồn";
+    updateStatSubDeptFilter();
   } else if (statLoaiCongVan.value === "Công văn Đến") {
     if (statNguonDenFilterContainer) statNguonDenFilterContainer.classList.remove("hidden");
     if (statDeptFilterContainer) statDeptFilterContainer.classList.add("hidden");
+    if (statSubDeptFilterContainer) statSubDeptFilterContainer.classList.add("hidden");
     if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
   } else {
     // Tất cả
     if (statNguonDenFilterContainer) statNguonDenFilterContainer.classList.remove("hidden");
     if (statDeptFilterContainer) statDeptFilterContainer.classList.add("hidden");
+    if (statSubDeptFilterContainer) statSubDeptFilterContainer.classList.add("hidden");
     if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
   }
 }
@@ -1525,12 +1582,17 @@ if (statLoaiCongVan) {
   statLoaiCongVan.addEventListener("change", updateStatDeptFilterVisibility);
 }
 
+if (statPhongBan) {
+  statPhongBan.addEventListener("change", updateStatSubDeptFilter);
+}
+
 function runStatistics() {
   const startDate = statStartDate ? statStartDate.value : "";
   const endDate = statEndDate ? statEndDate.value : "";
   const selectedLoai = statLoaiCongVan ? statLoaiCongVan.value : "Tất cả";
   const selectedNguonDen = statNguonDenSelect ? statNguonDenSelect.value : "Tất cả nguồn";
   const selectedDept = statPhongBan ? statPhongBan.value : "Tất cả phòng ban";
+  const selectedSubDept = statDonViChiTiet ? statDonViChiTiet.value : "Tất cả đơn vị chi tiết";
 
   let filtered = [...allDispatches];
 
@@ -1556,6 +1618,9 @@ function runStatistics() {
   }
   if (selectedLoai === "Công văn Đi" && selectedDept !== "Tất cả phòng ban") {
     filtered = filtered.filter(item => item.phong_ban === selectedDept);
+  }
+  if (selectedSubDept !== "Tất cả đơn vị chi tiết") {
+    filtered = filtered.filter(item => item.don_vi_chi_tiet === selectedSubDept);
   }
 
   const totalCount = filtered.length;
@@ -1652,7 +1717,10 @@ function renderStatDetailTable() {
           </span>
         </td>
         <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
-        <td class="px-3 py-2.5 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">${escapeHtml(displayUnitWithSub)}</td>
+        <td class="px-3 py-2.5 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">
+          <div>${escapeHtml(displayUnit)}</div>
+          ${item.don_vi_chi_tiet ? `<span class="badge bg-info text-dark" style="font-size: 0.75rem; margin-top: 2px; display: inline-block;">${escapeHtml(item.don_vi_chi_tiet)}</span>` : ""}
+        </td>
         <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDateToVN(item.ngay_ban_hanh)}</td>
         <td class="px-3 py-2.5 text-slate-800 leading-relaxed">
           <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
@@ -1741,6 +1809,7 @@ if (btnStatReset) {
     if (statLoaiCongVan) statLoaiCongVan.value = "Tất cả";
     if (statNguonDenSelect) statNguonDenSelect.value = "Tất cả nguồn";
     if (statPhongBan) statPhongBan.value = "Tất cả phòng ban";
+    if (statDonViChiTiet) statDonViChiTiet.value = "Tất cả đơn vị chi tiết";
     updateStatDeptFilterVisibility();
     runStatistics();
     showNotification("Đã đặt lại bộ lọc thống kê", "info");
