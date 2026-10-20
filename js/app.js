@@ -99,7 +99,7 @@ const unitLabel = document.getElementById("unitLabel");
 const unitTextContainer = document.getElementById("unitTextContainer");
 const unitInputText = document.getElementById("unitInputText");
 const unitSelectContainer = document.getElementById("unitSelectContainer");
-const unitSelectBox = document.getElementById("unitSelectBox");
+const unitSelectBox = document.getElementById("co_quan_ban_hanh") || document.getElementById("unitSelectBox");
 const subUnitContainer = document.getElementById("subUnitContainer");
 const subUnitSelectBox = document.getElementById("don_vi_chi_tiet");
 
@@ -554,13 +554,13 @@ function updateDynamicUnitField() {
   if (!loaiCongVanInput) return;
   const isDen = loaiCongVanInput.value === "Công văn Đến";
 
-  if (isDen) {
-    if (ngayDenContainer) ngayDenContainer.classList.remove("hidden");
-    if (ngayDenInput) ngayDenInput.setAttribute("required", "true");
+  // Ô "Thời gian CV đến" LUÔN HIỂN THỊ cả khi nhập mới và chỉnh sửa
+  if (ngayDenContainer) ngayDenContainer.classList.remove("hidden");
 
+  if (isDen) {
     if (nguonCongVanContainer) nguonCongVanContainer.classList.remove("hidden");
-    unitSelectContainer.classList.add("hidden");
-    unitSelectBox.removeAttribute("required");
+    if (unitSelectContainer) unitSelectContainer.classList.add("hidden");
+    if (unitSelectBox) unitSelectBox.removeAttribute("required");
     if (subUnitContainer) subUnitContainer.classList.add("hidden");
 
     const isUFM = nguonCongVanSelect && nguonCongVanSelect.value === "UFM Cơ sở chính";
@@ -585,18 +585,13 @@ function updateDynamicUnitField() {
     if (hasResponseDocInput) hasResponseDocInput.checked = false;
     toggleResponseDocFields(false);
   } else {
-    if (ngayDenContainer) ngayDenContainer.classList.add("hidden");
-    if (ngayDenInput) {
-      ngayDenInput.removeAttribute("required");
-    }
-
     if (nguonCongVanContainer) nguonCongVanContainer.classList.add("hidden");
     unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
     unitTextContainer.classList.add("hidden");
-    unitSelectContainer.classList.remove("hidden");
+    if (unitSelectContainer) unitSelectContainer.classList.remove("hidden");
 
     unitInputText.removeAttribute("required");
-    unitSelectBox.setAttribute("required", "true");
+    if (unitSelectBox) unitSelectBox.setAttribute("required", "true");
 
     updateSubUnitOptions();
 
@@ -673,16 +668,10 @@ if (form) {
     const ngay_ban_hanh = ngayBanHanhInput.value;
     const trich_yeu = trichYeuInput.value.trim();
     const drive_link = driveLinkInput.value.trim();
-    const isDen = loai_cong_van === "Công văn Đến";
-    const ngay_den = isDen && ngayDenInput ? ngayDenInput.value : "";
+    const ngay_den = ngayDenInput ? ngayDenInput.value : "";
 
     if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
       showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
-      return;
-    }
-
-    if (isDen && !ngay_den) {
-      showNotification("Vui lòng nhập Thời gian CV đến!", "error");
       return;
     }
 
@@ -715,11 +704,14 @@ if (form) {
       created_at: currentDoc ? (currentDoc.created_at || Date.now()) : Date.now()
     };
 
+    if (ngay_den) {
+      dispatchData.ngay_den = ngay_den;
+    }
+
     if (isDen) {
       dispatchData.nguon_cong_van = nguonCongVanSelect ? nguonCongVanSelect.value : "Khác";
-      dispatchData.ngay_den = ngay_den;
     } else {
-      if (subUnitSelectBox && subUnitSelectBox.value) {
+      if (subUnitContainer && !subUnitContainer.classList.contains("hidden") && subUnitSelectBox && subUnitSelectBox.value) {
         dispatchData.don_vi_chi_tiet = subUnitSelectBox.value;
       }
     }
@@ -861,8 +853,11 @@ window.editDispatch = function(id) {
 
   updateDynamicUnitField();
 
+  if (ngayDenInput) {
+    ngayDenInput.value = item.ngay_den || "";
+  }
+
   if (isCongVanDen(item.loai_cong_van)) {
-    if (ngayDenInput) ngayDenInput.value = item.ngay_den || "";
     const nguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
     if (nguonCongVanSelect) nguonCongVanSelect.value = nguon;
     updateDynamicUnitField();
@@ -872,7 +867,9 @@ window.editDispatch = function(id) {
       unitInputText.value = "UFM Cơ sở chính";
     }
   } else {
-    unitSelectBox.value = item.phong_ban || item.co_quan_ban_hanh || "Phòng Hành chính - Tài vụ";
+    if (unitSelectBox) {
+      unitSelectBox.value = item.phong_ban || item.co_quan_ban_hanh || "Phòng Hành chính - Tài vụ";
+    }
     updateSubUnitOptions();
     if (subUnitSelectBox && item.don_vi_chi_tiet) {
       subUnitSelectBox.value = item.don_vi_chi_tiet;
