@@ -218,10 +218,31 @@ function showNotification(message, type = "success") {
   }, 3000);
 }
 
-// Format Date Utility (YYYY-MM-DD or ISO String to DD/MM/YYYY)
-function formatDateToVN(dateString) {
-  if (!dateString) return "";
-  const str = String(dateString).trim();
+// Helper to render Đơn vị ban hành with Badge for Đơn vị chi tiết
+function renderDonViBanHanh(item) {
+  const donViChinh = item.co_quan_ban_hanh || item.don_vi_ban_hanh || item.phong_ban || '--';
+  const donViCon = item.don_vi_chi_tiet || item.sub_unit || '';
+
+  let html = `<div><strong>${escapeHtml(donViChinh)}</strong></div>`;
+  if (donViCon && String(donViCon).trim() !== '') {
+    html += `<span class="badge bg-info text-dark mt-1" style="font-size: 0.75rem; display: inline-block; padding: 3px 8px; border-radius: 4px;">${escapeHtml(donViCon)}</span>`;
+  }
+  return html;
+}
+
+// Format Date Utility (YYYY-MM-DD, Timestamp, or ISO String to DD/MM/YYYY)
+function formatDateToVN(dateValue) {
+  if (!dateValue) return "";
+  if (typeof dateValue === "number" || (!isNaN(dateValue) && !String(dateValue).includes("-") && !String(dateValue).includes("/"))) {
+    const d = new Date(Number(dateValue));
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
+  const str = String(dateValue).trim();
   if (str.includes("T")) {
     const isoDatePart = str.split("T")[0];
     const parts = isoDatePart.split("-");
@@ -233,7 +254,7 @@ function formatDateToVN(dateString) {
   if (parts.length === 3) {
     return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
   }
-  return dateString;
+  return str;
 }
 
 // Backward compatibility wrapper
@@ -1237,21 +1258,20 @@ function renderDispatchList() {
     const canEdit = currentRole !== "quanly";
     const hasResponse = isCongVanDi(item.loai_cong_van) && item.response_doc_id;
 
+    const thoiGianDisplay = item.ngay_den || item.created_at || item.ngay_ban_hanh || item.ngay_nhan;
+
     const checkboxCell = currentRole === "quantri" ? `
       <td class="px-2 py-3 text-center">
         <input type="checkbox" class="select-cv-item w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" data-id="${item.id}" data-type="${escapeHtml(item.loai_cong_van)}">
       </td>
     ` : "";
 
-    const displayUnit = item.co_quan_ban_hanh || item.phong_ban || "";
-    const displayUnitWithSub = (!isDen && item.don_vi_chi_tiet) ? `${displayUnit} (${item.don_vi_chi_tiet})` : displayUnit;
-
     return `
       <tr id="row-${item.id}" class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
         ${checkboxCell}
         <td class="px-2.5 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
         <td class="px-2.5 py-3 whitespace-nowrap text-slate-600">
-          ${isDen ? formatDateToVN(item.ngay_den) : "--"}
+          ${formatDateToVN(thoiGianDisplay) || '--'}
         </td>
         <td class="px-2.5 py-3 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
@@ -1272,9 +1292,8 @@ function renderDispatchList() {
         <td class="px-2.5 py-3 text-slate-700 font-medium break-words">
           ${escapeHtml(item.loai_van_ban)}
         </td>
-        <td class="px-2.5 py-3 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">
-          <div>${escapeHtml(displayUnit)}</div>
-          ${item.don_vi_chi_tiet ? `<span class="badge bg-info text-dark" style="font-size: 0.75rem; margin-top: 2px; display: inline-block;">${escapeHtml(item.don_vi_chi_tiet)}</span>` : ""}
+        <td class="px-2.5 py-3 text-slate-700 break-words">
+          ${renderDonViBanHanh(item)}
         </td>
         <td class="px-2.5 py-3 whitespace-nowrap text-slate-600">
           ${formatDateToVN(item.ngay_ban_hanh)}
@@ -1685,21 +1704,20 @@ function renderStatDetailTable() {
     const hasDriveLink = driveUrl && driveUrl.trim() !== "";
     const hasResponse = isCongVanDi(item.loai_cong_van) && item.response_doc_id;
 
+    const thoiGianDisplay = item.ngay_den || item.created_at || item.ngay_ban_hanh || item.ngay_nhan;
+
     const checkboxCell = currentRole === "quantri" ? `
       <td class="px-2 py-3 text-center">
         <input type="checkbox" class="select-cv-item w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer" data-id="${item.id}" data-type="${escapeHtml(item.loai_cong_van)}">
       </td>
     ` : "";
 
-    const displayUnit = item.co_quan_ban_hanh || item.phong_ban || "";
-    const displayUnitWithSub = (!isDen && item.don_vi_chi_tiet) ? `${displayUnit} (${item.don_vi_chi_tiet})` : displayUnit;
-
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
         ${checkboxCell}
         <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${startIndex + index + 1}</td>
         <td class="px-3 py-2.5 whitespace-nowrap text-slate-600">
-          ${isDen ? formatDateToVN(item.ngay_den) : "--"}
+          ${formatDateToVN(thoiGianDisplay) || '--'}
         </td>
         <td class="px-3 py-2.5 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
@@ -1717,9 +1735,8 @@ function renderStatDetailTable() {
           </span>
         </td>
         <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
-        <td class="px-3 py-2.5 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">
-          <div>${escapeHtml(displayUnit)}</div>
-          ${item.don_vi_chi_tiet ? `<span class="badge bg-info text-dark" style="font-size: 0.75rem; margin-top: 2px; display: inline-block;">${escapeHtml(item.don_vi_chi_tiet)}</span>` : ""}
+        <td class="px-3 py-2.5 text-slate-700 break-words">
+          ${renderDonViBanHanh(item)}
         </td>
         <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDateToVN(item.ngay_ban_hanh)}</td>
         <td class="px-3 py-2.5 text-slate-800 leading-relaxed">
