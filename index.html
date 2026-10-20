@@ -95,7 +95,7 @@
 
     <!-- Header Section -->
     <header class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-lg border-b border-indigo-800">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <div class="container-fluid main-container w-full px-5 py-5">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div class="flex items-center space-x-4">
             <div class="p-3 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
@@ -156,13 +156,13 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+    <main class="container-fluid main-container w-full px-5 py-8 flex-grow">
 
       <!-- TAB 1: TRANG CHỦ (Bố cục 2 cột) -->
-      <div id="tabHomeContent" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div id="tabHomeContent" class="flex flex-col lg:flex-row gap-6 w-full">
 
-        <!-- CỘT BÊN TRÁI: Form Nhập Công Văn Mới (lg:col-span-4) -->
-        <div id="formColumnContainer" class="lg:col-span-4">
+        <!-- CỘT BÊN TRÁI: Form Nhập Công Văn Mới (22%) -->
+        <div id="formColumnContainer" class="w-full lg:w-[22%] flex-shrink-0">
           <section id="formSection" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden sticky top-6 max-h-[calc(100vh-2rem)] flex flex-col">
             <div class="px-6 py-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between flex-shrink-0">
               <div class="flex items-center space-x-2">
@@ -263,18 +263,38 @@
                 </div>
 
                 <!-- Container for Select Box (Công văn Đi) -->
-                <div id="unitSelectContainer" class="relative hidden">
-                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <i class="fa-solid fa-building text-xs"></i>
-                  </span>
-                  <select id="unitSelectBox"
-                    class="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition appearance-none truncate">
-                    <option value="Phòng Hành chính - Tài vụ">Phòng Hành chính - Tài vụ</option>
-                    <option value="Phòng Đào tạo - Khoa học và QLSV">Phòng Đào tạo - Khoa học và QLSV</option>
-                  </select>
-                  <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                    <i class="fa-solid fa-chevron-down text-xs"></i>
-                  </span>
+                <div id="unitSelectContainer" class="hidden space-y-2">
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-building text-xs"></i>
+                    </span>
+                    <select id="co_quan_ban_hanh"
+                      class="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition appearance-none truncate">
+                      <option value="Phòng Hành chính - Tài vụ">Phòng Hành chính - Tài vụ</option>
+                      <option value="Phòng Đào tạo - Khoa học và QLSV">Phòng Đào tạo - Khoa học và QLSV</option>
+                    </select>
+                    <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </span>
+                  </div>
+
+                  <!-- Sub-unit Select Box (Phòng ban con) -->
+                  <div id="subUnitContainer" class="relative hidden">
+                    <label for="don_vi_chi_tiet" class="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Đơn vị chi tiết <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                      <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-sitemap text-xs"></i>
+                      </span>
+                      <select id="don_vi_chi_tiet"
+                        class="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition appearance-none truncate">
+                      </select>
+                      <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -405,8 +425,8 @@
           </section>
         </div>
 
-        <!-- CỘT BÊN PHẢI: Danh Sách Công Văn & Phân Trang (lg:col-span-8) -->
-        <div id="tableColumnContainer" class="lg:col-span-8 space-y-4">
+        <!-- CỘT BÊN PHẢI: Danh Sách Công Văn & Phân Trang (78%) -->
+        <div id="tableColumnContainer" class="w-full lg:w-[78%] flex-grow min-w-0 space-y-4">
           <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
             <div class="p-5 border-b border-slate-200/80 space-y-3">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -795,7 +815,7 @@
 
     <!-- Footer -->
     <footer class="bg-slate-900 text-slate-400 py-6 border-t border-slate-800 text-center text-xs mt-auto">
-      <div class="max-w-7xl mx-auto px-4">
+      <div class="container-fluid main-container w-full px-5">
         <p>© 2026 Hệ thống Quản lý Công văn Phân hiệu. Powered by UFM - Phân hiệu Quảng Ngãi.</p>
       </div>
     </footer>

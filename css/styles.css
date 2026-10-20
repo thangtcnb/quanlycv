@@ -126,22 +126,29 @@ body {
   overflow: hidden;
 }
 
+/* Full width main container override */
+.main-container, .container, .container-fluid {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 20px !important;
+}
+
 /* Full width responsive table layout to prevent horizontal scrollbars */
 .table-responsive {
   width: 100% !important;
-  overflow-x: hidden !important;
+  overflow-x: auto !important;
 }
 
 table {
   width: 100% !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   word-wrap: break-word;
   word-break: break-word;
 }
 
 /* Full width table layout mode when form column is hidden for 'quanly' */
-#tableColumnContainer.lg\:col-span-12 {
-  width: 100%;
+#tableColumnContainer.w-full {
+  width: 100% !important;
 }
 
 /* User management table styling enhancements */
