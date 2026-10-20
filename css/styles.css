@@ -126,8 +126,16 @@ body {
   overflow: hidden;
 }
 
-/* Table layout adjustments */
+/* Full width responsive table layout to prevent horizontal scrollbars */
+.table-responsive {
+  width: 100% !important;
+  overflow-x: hidden !important;
+}
+
 table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  word-wrap: break-word;
   word-break: break-word;
 }
 
