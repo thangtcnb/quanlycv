@@ -87,6 +87,8 @@ const submitBtn = document.getElementById("submitBtn");
 const cancelEditBtn = document.getElementById("cancelEditBtn");
 
 const dispatchIdInput = document.getElementById("dispatchId");
+const ngayDenContainer = document.getElementById("ngayDenContainer");
+const ngayNhanCvDenInput = document.getElementById("ngay_nhan_cv_den");
 const soKyHieuInput = document.getElementById("soKyHieu");
 const loaiCongVanInput = document.getElementById("loaiCongVan");
 
@@ -98,6 +100,8 @@ const unitTextContainer = document.getElementById("unitTextContainer");
 const unitInputText = document.getElementById("unitInputText");
 const unitSelectContainer = document.getElementById("unitSelectContainer");
 const unitSelectBox = document.getElementById("unitSelectBox");
+const subUnitContainer = document.getElementById("subUnitContainer");
+const subUnitSelectBox = document.getElementById("subUnitSelectBox");
 
 const loaiVanBanInput = document.getElementById("loaiVanBan");
 const ngayBanHanhInput = document.getElementById("ngayBanHanh");
@@ -212,14 +216,27 @@ function showNotification(message, type = "success") {
   }, 3000);
 }
 
-// Format Date Utility (YYYY-MM-DD to DD/MM/YYYY)
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const parts = dateStr.split("-");
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+// Format Date Utility (YYYY-MM-DD or ISO String to DD/MM/YYYY)
+function formatDateToVN(dateString) {
+  if (!dateString) return "";
+  const str = String(dateString).trim();
+  if (str.includes("T")) {
+    const isoDatePart = str.split("T")[0];
+    const parts = isoDatePart.split("-");
+    if (parts.length === 3) {
+      return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
+    }
   }
-  return dateStr;
+  const parts = str.split("-");
+  if (parts.length === 3) {
+    return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
+  }
+  return dateString;
+}
+
+// Backward compatibility wrapper
+function formatDate(dateStr) {
+  return formatDateToVN(dateStr);
 }
 
 // Convert Excel date or string to YYYY-MM-DD
@@ -283,9 +300,12 @@ function escapeHtml(str) {
 
 // Set Today default on date input
 function setDefaultDate() {
+  const today = new Date().toISOString().split("T")[0];
   if (ngayBanHanhInput && !ngayBanHanhInput.value) {
-    const today = new Date().toISOString().split("T")[0];
     ngayBanHanhInput.value = today;
+  }
+  if (ngayNhanCvDenInput && !ngayNhanCvDenInput.value) {
+    ngayNhanCvDenInput.value = today;
   }
 }
 
@@ -502,14 +522,46 @@ function setupNavigationTabs() {
 // -------------------------------------------------------------
 // 3. HOME TAB & DISPATCH FORM LOGIC
 // -------------------------------------------------------------
+function updateSubUnitOptions() {
+  if (!unitSelectBox || !subUnitSelectBox || !subUnitContainer) return;
+  const mainDept = unitSelectBox.value;
+  subUnitSelectBox.innerHTML = "";
+
+  if (mainDept === "Phòng Hành chính - Tài vụ") {
+    subUnitContainer.classList.remove("hidden");
+    const options = ["Hành chính", "Tài vụ", "Quản trị"];
+    options.forEach(opt => {
+      const optionEl = document.createElement("option");
+      optionEl.value = opt;
+      optionEl.textContent = opt;
+      subUnitSelectBox.appendChild(optionEl);
+    });
+  } else if (mainDept === "Phòng Đào tạo - Khoa học và QLSV") {
+    subUnitContainer.classList.remove("hidden");
+    const options = ["Đào tạo", "Khoa học", "Quản lý Sinh viên"];
+    options.forEach(opt => {
+      const optionEl = document.createElement("option");
+      optionEl.value = opt;
+      optionEl.textContent = opt;
+      subUnitSelectBox.appendChild(optionEl);
+    });
+  } else {
+    subUnitContainer.classList.add("hidden");
+  }
+}
+
 function updateDynamicUnitField() {
   if (!loaiCongVanInput) return;
   const isDen = loaiCongVanInput.value === "Công văn Đến";
 
   if (isDen) {
+    if (ngayDenContainer) ngayDenContainer.classList.remove("hidden");
+    if (ngayNhanCvDenInput) ngayNhanCvDenInput.setAttribute("required", "true");
+
     if (nguonCongVanContainer) nguonCongVanContainer.classList.remove("hidden");
     unitSelectContainer.classList.add("hidden");
     unitSelectBox.removeAttribute("required");
+    if (subUnitContainer) subUnitContainer.classList.add("hidden");
 
     const isUFM = nguonCongVanSelect && nguonCongVanSelect.value === "UFM Cơ sở chính";
 
@@ -533,6 +585,11 @@ function updateDynamicUnitField() {
     if (hasResponseDocInput) hasResponseDocInput.checked = false;
     toggleResponseDocFields(false);
   } else {
+    if (ngayDenContainer) ngayDenContainer.classList.add("hidden");
+    if (ngayNhanCvDenInput) {
+      ngayNhanCvDenInput.removeAttribute("required");
+    }
+
     if (nguonCongVanContainer) nguonCongVanContainer.classList.add("hidden");
     unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
     unitTextContainer.classList.add("hidden");
@@ -541,10 +598,20 @@ function updateDynamicUnitField() {
     unitInputText.removeAttribute("required");
     unitSelectBox.setAttribute("required", "true");
 
+    updateSubUnitOptions();
+
     // Show response checkbox container for outgoing documents
     if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.remove("hidden");
     toggleResponseDocFields(hasResponseDocInput ? hasResponseDocInput.checked : false);
   }
+}
+
+if (unitSelectBox) {
+  unitSelectBox.addEventListener("change", () => {
+    if (loaiCongVanInput && loaiCongVanInput.value === "Công văn Đi") {
+      updateSubUnitOptions();
+    }
+  });
 }
 
 function toggleResponseDocFields(show) {
@@ -606,9 +673,16 @@ if (form) {
     const ngay_ban_hanh = ngayBanHanhInput.value;
     const trich_yeu = trichYeuInput.value.trim();
     const drive_link = driveLinkInput.value.trim();
+    const isDen = loai_cong_van === "Công văn Đến";
+    const ngay_den = isDen && ngayNhanCvDenInput ? ngayNhanCvDenInput.value : "";
 
     if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
       showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
+      return;
+    }
+
+    if (isDen && !ngay_den) {
+      showNotification("Vui lòng nhập Thời gian CV đến!", "error");
       return;
     }
 
@@ -632,15 +706,22 @@ if (form) {
       so_ky_hieu,
       loai_cong_van,
       phong_ban: unitVal,
+      co_quan_ban_hanh: unitVal,
       loai_van_ban,
       ngay_ban_hanh,
       trich_yeu,
       drive_link,
+      link_google_drive: drive_link,
       created_at: currentDoc ? (currentDoc.created_at || Date.now()) : Date.now()
     };
 
-    if (loai_cong_van === "Công văn Đến") {
+    if (isDen) {
       dispatchData.nguon_cong_van = nguonCongVanSelect ? nguonCongVanSelect.value : "Khác";
+      dispatchData.ngay_den = ngay_den;
+    } else {
+      if (subUnitSelectBox && subUnitSelectBox.value) {
+        dispatchData.don_vi_chi_tiet = subUnitSelectBox.value;
+      }
     }
 
     if (currentDoc && currentDoc.response_doc_id) {
@@ -781,16 +862,21 @@ window.editDispatch = function(id) {
   updateDynamicUnitField();
 
   if (isCongVanDen(item.loai_cong_van)) {
+    if (ngayNhanCvDenInput) ngayNhanCvDenInput.value = item.ngay_den || "";
     const nguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
     if (nguonCongVanSelect) nguonCongVanSelect.value = nguon;
     updateDynamicUnitField();
     if (nguon === "Khác") {
-      unitInputText.value = item.phong_ban || "";
+      unitInputText.value = item.phong_ban || item.co_quan_ban_hanh || "";
     } else {
       unitInputText.value = "UFM Cơ sở chính";
     }
   } else {
-    unitSelectBox.value = item.phong_ban || "Phòng Hành chính - Tài vụ";
+    unitSelectBox.value = item.phong_ban || item.co_quan_ban_hanh || "Phòng Hành chính - Tài vụ";
+    updateSubUnitOptions();
+    if (subUnitSelectBox && item.don_vi_chi_tiet) {
+      subUnitSelectBox.value = item.don_vi_chi_tiet;
+    }
   }
 
   loaiVanBanInput.value = item.loai_van_ban || "";
@@ -1025,24 +1111,26 @@ function updateTableHeaders() {
     if (currentRole === "quantri") {
       tableHeaderRow.innerHTML = `
         <th class="px-2 py-3 text-center w-[3%]"><input type="checkbox" id="selectAllCongVan" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"></th>
-        <th class="px-2.5 py-3 text-center w-[4%]">#</th>
-        <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
-        <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
-        <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
-        <th class="px-2.5 py-3 w-[15%]">Đơn vị / Phòng ban</th>
+        <th class="px-2.5 py-3 text-center w-[3%]">#</th>
+        <th class="px-2.5 py-3 w-[10%]">Thời gian CV đến</th>
+        <th class="px-2.5 py-3 w-[11%]">Số / Ký hiệu</th>
+        <th class="px-2.5 py-3 w-[8%]">Loại CV</th>
+        <th class="px-2.5 py-3 w-[9%]">Loại VB</th>
+        <th class="px-2.5 py-3 w-[15%]">Đơn vị ban hành</th>
         <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
-        <th class="px-2.5 py-3 w-[31%]">Trích yếu nội dung</th>
+        <th class="px-2.5 py-3 w-[26%]">Trích yếu nội dung</th>
         <th class="px-2.5 py-3 text-center w-[6%]">File</th>
       `;
     } else {
       tableHeaderRow.innerHTML = `
         <th class="px-2.5 py-3 text-center w-[4%]">#</th>
-        <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
-        <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
-        <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
-        <th class="px-2.5 py-3 w-[15%]">Đơn vị / Phòng ban</th>
+        <th class="px-2.5 py-3 w-[10%]">Thời gian CV đến</th>
+        <th class="px-2.5 py-3 w-[11%]">Số / Ký hiệu</th>
+        <th class="px-2.5 py-3 w-[8%]">Loại CV</th>
+        <th class="px-2.5 py-3 w-[9%]">Loại VB</th>
+        <th class="px-2.5 py-3 w-[16%]">Đơn vị ban hành</th>
         <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
-        <th class="px-2.5 py-3 w-[34%]">Trích yếu nội dung</th>
+        <th class="px-2.5 py-3 w-[27%]">Trích yếu nội dung</th>
         <th class="px-2.5 py-3 text-center w-[6%]">File</th>
       `;
     }
@@ -1053,24 +1141,26 @@ function updateTableHeaders() {
     if (currentRole === "quantri") {
       statHeaderRow.innerHTML = `
         <th class="px-2 py-3 text-center w-[3%]"><input type="checkbox" id="statSelectAllCongVan" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"></th>
-        <th class="px-3 py-3 text-center w-[4%]">#</th>
-        <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
-        <th class="px-3 py-3 w-[10%]">Phân loại</th>
-        <th class="px-3 py-3 w-[10%]">Loại VB</th>
-        <th class="px-3 py-3 w-[15%]">Nơi ban hành / Phòng ban</th>
+        <th class="px-3 py-3 text-center w-[3%]">#</th>
+        <th class="px-3 py-3 w-[10%]">Thời gian CV đến</th>
+        <th class="px-3 py-3 w-[11%]">Số / Ký hiệu</th>
+        <th class="px-3 py-3 w-[8%]">Phân loại</th>
+        <th class="px-3 py-3 w-[9%]">Loại VB</th>
+        <th class="px-3 py-3 w-[15%]">Đơn vị ban hành</th>
         <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
-        <th class="px-3 py-3 w-[31%]">Trích yếu nội dung</th>
+        <th class="px-3 py-3 w-[26%]">Trích yếu nội dung</th>
         <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
       `;
     } else {
       statHeaderRow.innerHTML = `
         <th class="px-3 py-3 text-center w-[4%]">#</th>
-        <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
-        <th class="px-3 py-3 w-[10%]">Phân loại</th>
-        <th class="px-3 py-3 w-[10%]">Loại VB</th>
-        <th class="px-3 py-3 w-[15%]">Nơi ban hành / Phòng ban</th>
+        <th class="px-3 py-3 w-[10%]">Thời gian CV đến</th>
+        <th class="px-3 py-3 w-[11%]">Số / Ký hiệu</th>
+        <th class="px-3 py-3 w-[8%]">Phân loại</th>
+        <th class="px-3 py-3 w-[9%]">Loại VB</th>
+        <th class="px-3 py-3 w-[16%]">Đơn vị ban hành</th>
         <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
-        <th class="px-3 py-3 w-[34%]">Trích yếu nội dung</th>
+        <th class="px-3 py-3 w-[27%]">Trích yếu nội dung</th>
         <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
       `;
     }
@@ -1096,7 +1186,7 @@ function renderDispatchList() {
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.length);
   const currentItems = filtered.slice(startIndex, endIndex);
 
-  const colSpanCount = currentRole === "quantri" ? 9 : 8;
+  const colSpanCount = currentRole === "quantri" ? 10 : 9;
 
   if (filtered.length === 0) {
     dispatchTableBody.innerHTML = `
@@ -1131,10 +1221,16 @@ function renderDispatchList() {
       </td>
     ` : "";
 
+    const displayUnit = item.co_quan_ban_hanh || item.phong_ban || "";
+    const displayUnitWithSub = (!isDen && item.don_vi_chi_tiet) ? `${displayUnit} (${item.don_vi_chi_tiet})` : displayUnit;
+
     return `
       <tr id="row-${item.id}" class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
         ${checkboxCell}
         <td class="px-2.5 py-3 font-medium text-slate-500 text-center">${rowNum}</td>
+        <td class="px-2.5 py-3 whitespace-nowrap text-slate-600">
+          ${isDen ? formatDateToVN(item.ngay_den) : "--"}
+        </td>
         <td class="px-2.5 py-3 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
           ${hasResponse ? `
@@ -1154,11 +1250,11 @@ function renderDispatchList() {
         <td class="px-2.5 py-3 text-slate-700 font-medium break-words">
           ${escapeHtml(item.loai_van_ban)}
         </td>
-        <td class="px-2.5 py-3 text-slate-700 break-words" title="${escapeHtml(item.phong_ban)}">
-          ${escapeHtml(item.phong_ban)}
+        <td class="px-2.5 py-3 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">
+          ${escapeHtml(displayUnitWithSub)}
         </td>
         <td class="px-2.5 py-3 whitespace-nowrap text-slate-600">
-          ${formatDate(item.ngay_ban_hanh)}
+          ${formatDateToVN(item.ngay_ban_hanh)}
         </td>
         <td class="px-2.5 py-3 text-slate-800 leading-relaxed">
           <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
@@ -1178,7 +1274,7 @@ function renderDispatchList() {
         </td>
         <td class="px-2.5 py-3 text-center whitespace-nowrap">
           ${hasDriveLink ? `
-            <a href="${escapeHtml(item.drive_link)}" target="_blank" rel="noopener noreferrer"
+            <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener noreferrer"
                class="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[11px] font-medium transition"
                title="Mở Google Drive Link trong tab mới">
               <i class="fa-brands fa-google-drive text-emerald-600 mr-1 text-xs"></i>
@@ -1502,7 +1598,7 @@ function renderStatDetailTable() {
   const endIndex = Math.min(startIndex + statItemsPerPage, filteredItems.length);
   const currentItems = filteredItems.slice(startIndex, endIndex);
 
-  const colSpanCount = currentRole === "quantri" ? 9 : 8;
+  const colSpanCount = currentRole === "quantri" ? 10 : 9;
 
   if (filteredItems.length === 0) {
     statDetailTableBody.innerHTML = `
@@ -1533,10 +1629,16 @@ function renderStatDetailTable() {
       </td>
     ` : "";
 
+    const displayUnit = item.co_quan_ban_hanh || item.phong_ban || "";
+    const displayUnitWithSub = (!isDen && item.don_vi_chi_tiet) ? `${displayUnit} (${item.don_vi_chi_tiet})` : displayUnit;
+
     return `
       <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
         ${checkboxCell}
         <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${startIndex + index + 1}</td>
+        <td class="px-3 py-2.5 whitespace-nowrap text-slate-600">
+          ${isDen ? formatDateToVN(item.ngay_den) : "--"}
+        </td>
         <td class="px-3 py-2.5 font-semibold text-slate-900 break-words">
           ${escapeHtml(item.so_ky_hieu)}
           ${hasResponse ? `
@@ -1553,8 +1655,8 @@ function renderStatDetailTable() {
           </span>
         </td>
         <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
-        <td class="px-3 py-2.5 text-slate-700">${escapeHtml(item.phong_ban)}</td>
-        <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDate(item.ngay_ban_hanh)}</td>
+        <td class="px-3 py-2.5 text-slate-700 break-words" title="${escapeHtml(displayUnitWithSub)}">${escapeHtml(displayUnitWithSub)}</td>
+        <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDateToVN(item.ngay_ban_hanh)}</td>
         <td class="px-3 py-2.5 text-slate-800 leading-relaxed">
           <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
             ${escapeHtml(item.trich_yeu)}
@@ -1562,7 +1664,7 @@ function renderStatDetailTable() {
         </td>
         <td class="px-3 py-2.5 text-center whitespace-nowrap">
           ${hasDriveLink ? `
-            <a href="${escapeHtml(item.drive_link)}" target="_blank" rel="noopener noreferrer"
+            <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener noreferrer"
                class="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[11px] font-medium transition">
               <i class="fa-brands fa-google-drive text-emerald-600 mr-1 text-xs"></i>
               Xem
@@ -1669,34 +1771,34 @@ function exportToExcel() {
     }
 
     const headers = [
+      "Thời gian CV đến",
       "Số / Ký hiệu",
       "Phân loại",
       "Loại văn bản",
-      "Đơn vị ban hành",
+      "Đơn vị ban hành / Chi tiết",
       "Ngày ban hành",
       "Trích yếu nội dung",
       "Link đính kèm"
     ];
 
     const exportData = allDispatches.map((item) => {
-      let displayLoai = "CV đi";
-      if (isCongVanDen(item.loai_cong_van)) {
-        displayLoai = "CV đến";
-      } else if (isCongVanDi(item.loai_cong_van)) {
-        displayLoai = "CV đi";
-      } else {
-        displayLoai = item.loai_cong_van || "CV đi";
+      const isDen = isCongVanDen(item.loai_cong_van);
+      let displayLoai = isDen ? "CV đến" : "CV đi";
+
+      let coQuan = item.co_quan_ban_hanh || item.phong_ban || "";
+      if (!isDen && item.don_vi_chi_tiet) {
+        coQuan = `${coQuan} (${item.don_vi_chi_tiet})`;
       }
 
-      const coQuan = item.co_quan_ban_hanh || item.phong_ban || "";
       const linkDrive = item.link_google_drive || item.drive_link || "";
 
       return {
+        "Thời gian CV đến": isDen ? formatDateToVN(item.ngay_den) : "",
         "Số / Ký hiệu": item.so_ky_hieu || "",
         "Phân loại": displayLoai,
         "Loại văn bản": item.loai_van_ban || "",
-        "Đơn vị ban hành": coQuan,
-        "Ngày ban hành": formatDate(item.ngay_ban_hanh),
+        "Đơn vị ban hành / Chi tiết": coQuan,
+        "Ngày ban hành": formatDateToVN(item.ngay_ban_hanh),
         "Trích yếu nội dung": item.trich_yeu || "",
         "Link đính kèm": linkDrive
       };
@@ -1719,10 +1821,10 @@ function exportToExcel() {
         }
       });
 
-      // Hyperlink for 'Link đính kèm' (Column G)
+      // Hyperlink for 'Link đính kèm' (Column H)
       const linkUrl = row["Link đính kèm"];
       if (linkUrl && (linkUrl.startsWith("http://") || linkUrl.startsWith("https://"))) {
-        const cellRef = "G" + rowNum;
+        const cellRef = "H" + rowNum;
         if (worksheet[cellRef]) {
           worksheet[cellRef].l = { Target: linkUrl, Tooltip: linkUrl };
         }
@@ -1987,28 +2089,51 @@ async function handleExcelImport(e) {
 
     const mappedData = rawJsonArray.map(row => {
       const rawLoai = String(row["Phân loại"] || row["Loại CV"] || "").trim();
-      let loai_cong_van = "CongVanDi";
+      let loai_cong_van = "Công văn Đi";
       if (rawLoai.toLowerCase().includes("đến") || rawLoai.toLowerCase().includes("den") || rawLoai === "CongVanDen") {
-        loai_cong_van = "CongVanDen";
+        loai_cong_van = "Công văn Đến";
       } else if (rawLoai.toLowerCase().includes("đi") || rawLoai.toLowerCase().includes("di") || rawLoai === "CongVanDi") {
-        loai_cong_van = "CongVanDi";
+        loai_cong_van = "Công văn Đi";
       }
 
-      const coQuan = String(row["Đơn vị ban hành"] || row["Đơn vị / Phòng ban"] || "").trim();
-      const linkDrive = row["Link đính kèm"] || row["Link đính kèm (Drive)"] || row["Link Google Drive"] || "";
+      let coQuanRaw = String(row["Đơn vị ban hành / Chi tiết"] || row["Đơn vị ban hành"] || row["Đơn vị / Phòng ban"] || "").trim();
+      let mainCoQuan = coQuanRaw;
+      let donViChiTiet = "";
 
-      return {
+      if (coQuanRaw.includes("(") && coQuanRaw.endsWith(")")) {
+        const match = coQuanRaw.match(/^(.*?)\s*\((.*?)\)$/);
+        if (match) {
+          mainCoQuan = match[1].trim();
+          donViChiTiet = match[2].trim();
+        }
+      }
+
+      const linkDrive = row["Link đính kèm"] || row["Link đính kèm (Drive)"] || row["Link Google Drive"] || "";
+      const rawNgayDen = row["Thời gian CV đến"] || row["Ngày đến"] || "";
+
+      const record = {
         so_ky_hieu: String(row["Số / Ký hiệu"] || "").trim(),
         loai_cong_van: loai_cong_van,
         loai_van_ban: String(row["Loại văn bản"] || "").trim(),
-        co_quan_ban_hanh: coQuan,
-        phong_ban: coQuan,
+        co_quan_ban_hanh: mainCoQuan,
+        phong_ban: mainCoQuan,
         ngay_ban_hanh: formatDateToYYYYMMDD(row["Ngày ban hành"] || row["Ngày tháng văn bản"]),
         trich_yeu: String(row["Trích yếu nội dung"] || row["Trích yếu nội dung văn bản"] || "").trim(),
         link_google_drive: String(linkDrive).trim(),
         drive_link: String(linkDrive).trim(),
         created_at: Date.now()
       };
+
+      if (isCongVanDen(loai_cong_van)) {
+        record.ngay_den = formatDateToYYYYMMDD(rawNgayDen);
+        record.nguon_cong_van = mainCoQuan === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác";
+      } else {
+        if (donViChiTiet) {
+          record.don_vi_chi_tiet = donViChiTiet;
+        }
+      }
+
+      return record;
     });
 
     for (const item of mappedData) {
