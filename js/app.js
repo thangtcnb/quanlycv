@@ -88,7 +88,7 @@ const cancelEditBtn = document.getElementById("cancelEditBtn");
 
 const dispatchIdInput = document.getElementById("dispatchId");
 const ngayDenContainer = document.getElementById("ngayDenContainer");
-const ngayNhanCvDenInput = document.getElementById("ngay_nhan_cv_den");
+const ngayDenInput = document.getElementById("ngay_den");
 const soKyHieuInput = document.getElementById("soKyHieu");
 const loaiCongVanInput = document.getElementById("loaiCongVan");
 
@@ -101,7 +101,7 @@ const unitInputText = document.getElementById("unitInputText");
 const unitSelectContainer = document.getElementById("unitSelectContainer");
 const unitSelectBox = document.getElementById("unitSelectBox");
 const subUnitContainer = document.getElementById("subUnitContainer");
-const subUnitSelectBox = document.getElementById("subUnitSelectBox");
+const subUnitSelectBox = document.getElementById("don_vi_chi_tiet");
 
 const loaiVanBanInput = document.getElementById("loaiVanBan");
 const ngayBanHanhInput = document.getElementById("ngayBanHanh");
@@ -304,8 +304,8 @@ function setDefaultDate() {
   if (ngayBanHanhInput && !ngayBanHanhInput.value) {
     ngayBanHanhInput.value = today;
   }
-  if (ngayNhanCvDenInput && !ngayNhanCvDenInput.value) {
-    ngayNhanCvDenInput.value = today;
+  if (ngayDenInput && !ngayDenInput.value) {
+    ngayDenInput.value = today;
   }
 }
 
@@ -556,7 +556,7 @@ function updateDynamicUnitField() {
 
   if (isDen) {
     if (ngayDenContainer) ngayDenContainer.classList.remove("hidden");
-    if (ngayNhanCvDenInput) ngayNhanCvDenInput.setAttribute("required", "true");
+    if (ngayDenInput) ngayDenInput.setAttribute("required", "true");
 
     if (nguonCongVanContainer) nguonCongVanContainer.classList.remove("hidden");
     unitSelectContainer.classList.add("hidden");
@@ -586,8 +586,8 @@ function updateDynamicUnitField() {
     toggleResponseDocFields(false);
   } else {
     if (ngayDenContainer) ngayDenContainer.classList.add("hidden");
-    if (ngayNhanCvDenInput) {
-      ngayNhanCvDenInput.removeAttribute("required");
+    if (ngayDenInput) {
+      ngayDenInput.removeAttribute("required");
     }
 
     if (nguonCongVanContainer) nguonCongVanContainer.classList.add("hidden");
@@ -674,7 +674,7 @@ if (form) {
     const trich_yeu = trichYeuInput.value.trim();
     const drive_link = driveLinkInput.value.trim();
     const isDen = loai_cong_van === "Công văn Đến";
-    const ngay_den = isDen && ngayNhanCvDenInput ? ngayNhanCvDenInput.value : "";
+    const ngay_den = isDen && ngayDenInput ? ngayDenInput.value : "";
 
     if (!so_ky_hieu || !loai_cong_van || !unitVal || !loai_van_ban || !ngay_ban_hanh || !trich_yeu) {
       showNotification("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
@@ -862,7 +862,7 @@ window.editDispatch = function(id) {
   updateDynamicUnitField();
 
   if (isCongVanDen(item.loai_cong_van)) {
-    if (ngayNhanCvDenInput) ngayNhanCvDenInput.value = item.ngay_den || "";
+    if (ngayDenInput) ngayDenInput.value = item.ngay_den || "";
     const nguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
     if (nguonCongVanSelect) nguonCongVanSelect.value = nguon;
     updateDynamicUnitField();
@@ -1112,25 +1112,25 @@ function updateTableHeaders() {
       tableHeaderRow.innerHTML = `
         <th class="px-2 py-3 text-center w-[3%]"><input type="checkbox" id="selectAllCongVan" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"></th>
         <th class="px-2.5 py-3 text-center w-[3%]">#</th>
-        <th class="px-2.5 py-3 w-[10%]">Thời gian CV đến</th>
-        <th class="px-2.5 py-3 w-[11%]">Số / Ký hiệu</th>
-        <th class="px-2.5 py-3 w-[8%]">Loại CV</th>
-        <th class="px-2.5 py-3 w-[9%]">Loại VB</th>
+        <th class="px-2.5 py-3 w-[11%]">Thời gian CV đến</th>
+        <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
         <th class="px-2.5 py-3 w-[15%]">Đơn vị ban hành</th>
         <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
-        <th class="px-2.5 py-3 w-[26%]">Trích yếu nội dung</th>
+        <th class="px-2.5 py-3 w-[21%]">Trích yếu nội dung</th>
         <th class="px-2.5 py-3 text-center w-[6%]">File</th>
       `;
     } else {
       tableHeaderRow.innerHTML = `
-        <th class="px-2.5 py-3 text-center w-[4%]">#</th>
-        <th class="px-2.5 py-3 w-[10%]">Thời gian CV đến</th>
-        <th class="px-2.5 py-3 w-[11%]">Số / Ký hiệu</th>
-        <th class="px-2.5 py-3 w-[8%]">Loại CV</th>
-        <th class="px-2.5 py-3 w-[9%]">Loại VB</th>
-        <th class="px-2.5 py-3 w-[16%]">Đơn vị ban hành</th>
+        <th class="px-2.5 py-3 text-center w-[3%]">#</th>
+        <th class="px-2.5 py-3 w-[11%]">Thời gian CV đến</th>
+        <th class="px-2.5 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại CV</th>
+        <th class="px-2.5 py-3 w-[10%]">Loại VB</th>
+        <th class="px-2.5 py-3 w-[15%]">Đơn vị ban hành</th>
         <th class="px-2.5 py-3 w-[9%]">Ngày BH</th>
-        <th class="px-2.5 py-3 w-[27%]">Trích yếu nội dung</th>
+        <th class="px-2.5 py-3 w-[24%]">Trích yếu nội dung</th>
         <th class="px-2.5 py-3 text-center w-[6%]">File</th>
       `;
     }
@@ -1142,25 +1142,25 @@ function updateTableHeaders() {
       statHeaderRow.innerHTML = `
         <th class="px-2 py-3 text-center w-[3%]"><input type="checkbox" id="statSelectAllCongVan" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"></th>
         <th class="px-3 py-3 text-center w-[3%]">#</th>
-        <th class="px-3 py-3 w-[10%]">Thời gian CV đến</th>
-        <th class="px-3 py-3 w-[11%]">Số / Ký hiệu</th>
-        <th class="px-3 py-3 w-[8%]">Phân loại</th>
-        <th class="px-3 py-3 w-[9%]">Loại VB</th>
+        <th class="px-3 py-3 w-[11%]">Thời gian CV đến</th>
+        <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-3 py-3 w-[10%]">Phân loại</th>
+        <th class="px-3 py-3 w-[10%]">Loại VB</th>
         <th class="px-3 py-3 w-[15%]">Đơn vị ban hành</th>
         <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
-        <th class="px-3 py-3 w-[26%]">Trích yếu nội dung</th>
+        <th class="px-3 py-3 w-[21%]">Trích yếu nội dung</th>
         <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
       `;
     } else {
       statHeaderRow.innerHTML = `
-        <th class="px-3 py-3 text-center w-[4%]">#</th>
-        <th class="px-3 py-3 w-[10%]">Thời gian CV đến</th>
-        <th class="px-3 py-3 w-[11%]">Số / Ký hiệu</th>
-        <th class="px-3 py-3 w-[8%]">Phân loại</th>
-        <th class="px-3 py-3 w-[9%]">Loại VB</th>
-        <th class="px-3 py-3 w-[16%]">Đơn vị ban hành</th>
+        <th class="px-3 py-3 text-center w-[3%]">#</th>
+        <th class="px-3 py-3 w-[11%]">Thời gian CV đến</th>
+        <th class="px-3 py-3 w-[12%]">Số / Ký hiệu</th>
+        <th class="px-3 py-3 w-[10%]">Phân loại</th>
+        <th class="px-3 py-3 w-[10%]">Loại VB</th>
+        <th class="px-3 py-3 w-[15%]">Đơn vị ban hành</th>
         <th class="px-3 py-3 w-[9%]">Ngày ban hành</th>
-        <th class="px-3 py-3 w-[27%]">Trích yếu nội dung</th>
+        <th class="px-3 py-3 w-[24%]">Trích yếu nội dung</th>
         <th class="px-3 py-3 text-center w-[6%]">Link Drive</th>
       `;
     }
@@ -2183,6 +2183,15 @@ if (btnExportExcel) btnExportExcel.addEventListener("click", exportToExcel);
 if (btnExportJSON) btnExportJSON.addEventListener("click", exportToJSON);
 if (headerBtnExportExcel) headerBtnExportExcel.addEventListener("click", exportToExcel);
 if (headerBtnExportJSON) headerBtnExportJSON.addEventListener("click", exportToJSON);
+
+// -------------------------------------------------------------
+// AUTO REFRESH (MỖI 5 PHÚT / 300.000 ms)
+// -------------------------------------------------------------
+setInterval(() => {
+  console.log("Tự động làm mới dữ liệu...");
+  if (typeof loadDanhSachCongVan === 'function') loadDanhSachCongVan();
+  if (typeof updateThongKe === 'function') updateThongKe();
+}, 300000);
 
 // -------------------------------------------------------------
 // APP INITIALIZATION
