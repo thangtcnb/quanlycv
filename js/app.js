@@ -59,9 +59,11 @@ const btnLogout = document.getElementById("btnLogout");
 
 // DOM Elements - Navigation Tabs
 const tabHomeBtn = document.getElementById("tabHomeBtn");
+const tabUfmBtn = document.getElementById("tabUfmBtn");
 const tabStatsBtn = document.getElementById("tabStatsBtn");
 const tabUsersBtn = document.getElementById("tabUsersBtn");
 const tabHomeContent = document.getElementById("tabHomeContent");
+const tabUfmContent = document.getElementById("tabUfmContent");
 const tabStatsContent = document.getElementById("tabStatsContent");
 const tabUsersContent = document.getElementById("tabUsersContent");
 
@@ -94,6 +96,8 @@ const loaiCongVanInput = document.getElementById("loaiCongVan");
 
 const nguonCongVanContainer = document.getElementById("nguonCongVanContainer");
 const nguonCongVanSelect = document.getElementById("nguonCongVan");
+const donViUfmContainer = document.getElementById("donViUfmContainer");
+const donViUfmSelectBox = document.getElementById("don_vi_ufm_co_so_chinh");
 
 const unitLabel = document.getElementById("unitLabel");
 const unitTextContainer = document.getElementById("unitTextContainer");
@@ -145,6 +149,22 @@ const btnBatchDelete = document.getElementById("btnBatchDelete");
 const statBatchActionToolbar = document.getElementById("statBatchActionToolbar");
 const statSelectedCountText = document.getElementById("statSelectedCountText");
 const btnStatBatchDelete = document.getElementById("btnStatBatchDelete");
+
+// DOM Elements - Tab UFM
+const ufmFilterFromDate = document.getElementById("ufm_filter_from_date");
+const ufmFilterToDate = document.getElementById("ufm_filter_to_date");
+const ufmFilterDonVi = document.getElementById("ufm_filter_don_vi");
+const btnUfmFilter = document.getElementById("btnUfmFilter");
+const btnUfmReset = document.getElementById("btnUfmReset");
+const ufmDetailTableBody = document.getElementById("ufmDetailTableBody");
+const ufmDetailBadge = document.getElementById("ufmDetailBadge");
+const ufmPaginationInfo = document.getElementById("ufmPaginationInfo");
+const ufmPaginationControls = document.getElementById("ufmPaginationControls");
+
+// Tab UFM State
+let ufmCurrentPage = 1;
+let ufmItemsPerPage = 20;
+let currentFilteredUfmItems = [];
 
 // DOM Elements - Statistics
 const statStartDate = document.getElementById("statStartDate");
@@ -218,10 +238,10 @@ function showNotification(message, type = "success") {
   }, 3000);
 }
 
-// Helper to render Đơn vị ban hành with Badge for Đơn vị chi tiết
+// Helper to render Đơn vị ban hành with Badge for Đơn vị chi tiết / UFM unit
 function renderDonViBanHanh(item) {
   const donViChinh = item.co_quan_ban_hanh || item.don_vi_ban_hanh || item.phong_ban || '--';
-  const donViCon = item.don_vi_chi_tiet || item.sub_unit || '';
+  const donViCon = item.don_vi_ufm_co_so_chinh || item.don_vi_chi_tiet || item.sub_unit || '';
 
   let html = `<div><strong>${escapeHtml(donViChinh)}</strong></div>`;
   if (donViCon && String(donViCon).trim() !== '') {
@@ -500,14 +520,14 @@ btnLogout.addEventListener("click", () => {
 // -------------------------------------------------------------
 function setupNavigationTabs() {
   function activateTab(activeBtn, contentToShow) {
-    [tabHomeBtn, tabStatsBtn, tabUsersBtn].forEach(btn => {
+    [tabHomeBtn, tabUfmBtn, tabStatsBtn, tabUsersBtn].forEach(btn => {
       if (btn) {
         btn.classList.remove("active", "text-white", "bg-white/10");
         btn.classList.add("text-indigo-200");
       }
     });
 
-    [tabHomeContent, tabStatsContent, tabUsersContent].forEach(content => {
+    [tabHomeContent, tabUfmContent, tabStatsContent, tabUsersContent].forEach(content => {
       if (content) content.classList.add("hidden");
     });
 
@@ -524,6 +544,13 @@ function setupNavigationTabs() {
   if (tabHomeBtn) {
     tabHomeBtn.addEventListener("click", () => {
       activateTab(tabHomeBtn, tabHomeContent);
+    });
+  }
+
+  if (tabUfmBtn) {
+    tabUfmBtn.addEventListener("click", () => {
+      activateTab(tabUfmBtn, tabUfmContent);
+      loadCongVanUFM();
     });
   }
 
@@ -589,11 +616,13 @@ function updateDynamicUnitField() {
     const isUFM = nguonCongVanSelect && nguonCongVanSelect.value === "UFM Cơ sở chính";
 
     if (isUFM) {
+      if (donViUfmContainer) donViUfmContainer.classList.remove("hidden");
       unitLabel.innerHTML = `Đơn vị ban hành <span class="text-rose-500">*</span>`;
       unitTextContainer.classList.add("hidden");
       unitInputText.value = "UFM Cơ sở chính";
       unitInputText.removeAttribute("required");
     } else {
+      if (donViUfmContainer) donViUfmContainer.classList.add("hidden");
       unitLabel.innerHTML = `Đơn vị ban hành <span class="text-rose-500">*</span>`;
       unitTextContainer.classList.remove("hidden");
       if (unitInputText.value === "UFM Cơ sở chính") {
@@ -601,6 +630,8 @@ function updateDynamicUnitField() {
       }
       unitInputText.setAttribute("required", "true");
     }
+  } else {
+    if (donViUfmContainer) donViUfmContainer.classList.add("hidden");
 
     // Hide response section for incoming documents
     if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.add("hidden");
@@ -739,6 +770,10 @@ if (form) {
 
       if (isDen) {
         dispatchData.nguon_cong_van = nguonCongVanSelect ? nguonCongVanSelect.value : "Khác";
+        if (dispatchData.nguon_cong_van === "UFM Cơ sở chính" && donViUfmSelectBox) {
+          dispatchData.don_vi_ufm_co_so_chinh = donViUfmSelectBox.value;
+          dispatchData.don_vi_chi_tiet = donViUfmSelectBox.value;
+        }
       } else {
         if (donViChiTiet) {
           dispatchData.don_vi_chi_tiet = donViChiTiet;
@@ -911,6 +946,9 @@ window.editDispatch = function(id) {
       unitInputText.value = item.phong_ban || item.co_quan_ban_hanh || "";
     } else {
       unitInputText.value = "UFM Cơ sở chính";
+      if (donViUfmSelectBox && (item.don_vi_ufm_co_so_chinh || item.don_vi_chi_tiet)) {
+        donViUfmSelectBox.value = item.don_vi_ufm_co_so_chinh || item.don_vi_chi_tiet;
+      }
     }
   } else {
     if (unitSelectBox) {
@@ -1146,6 +1184,200 @@ window.loadDanhSachCongVan = function() {
 window.updateThongKe = function() {
   runStatistics();
 };
+
+window.loadCongVanUFM = function() {
+  runUfmFilter();
+};
+
+// -------------------------------------------------------------
+// TAB CÔNG VĂN UFM LOGIC & FILTER
+// -------------------------------------------------------------
+function runUfmFilter() {
+  const fromDate = ufmFilterFromDate ? ufmFilterFromDate.value : "";
+  const toDate = ufmFilterToDate ? ufmFilterToDate.value : "";
+  const selectedDonVi = ufmFilterDonVi ? ufmFilterDonVi.value : "Tất cả các đơn vị";
+
+  let filtered = allDispatches.filter(item => {
+    // Only incoming documents from "UFM Cơ sở chính"
+    const isDen = isCongVanDen(item.loai_cong_van);
+    if (!isDen) return false;
+
+    const nguon = item.nguon_cong_van || (item.phong_ban === "UFM Cơ sở chính" ? "UFM Cơ sở chính" : "Khác");
+    if (nguon !== "UFM Cơ sở chính") return false;
+
+    return true;
+  });
+
+  if (fromDate) {
+    filtered = filtered.filter(item => {
+      const d = item.ngay_den || item.ngay_ban_hanh;
+      return d >= fromDate;
+    });
+  }
+
+  if (toDate) {
+    filtered = filtered.filter(item => {
+      const d = item.ngay_den || item.ngay_ban_hanh;
+      return d <= toDate;
+    });
+  }
+
+  if (selectedDonVi !== "Tất cả các đơn vị") {
+    filtered = filtered.filter(item => {
+      const ufmUnit = item.don_vi_ufm_co_so_chinh || item.don_vi_chi_tiet || "";
+      return ufmUnit === selectedDonVi;
+    });
+  }
+
+  currentFilteredUfmItems = filtered;
+  ufmCurrentPage = 1;
+  renderUfmDetailTable();
+}
+
+function renderUfmDetailTable() {
+  if (!ufmDetailTableBody) return;
+
+  const filteredItems = currentFilteredUfmItems || [];
+
+  if (ufmDetailBadge) {
+    ufmDetailBadge.textContent = `${filteredItems.length} kết quả`;
+  }
+
+  const totalPages = Math.ceil(filteredItems.length / ufmItemsPerPage) || 1;
+  if (ufmCurrentPage > totalPages) {
+    ufmCurrentPage = totalPages;
+  }
+
+  const startIndex = (ufmCurrentPage - 1) * ufmItemsPerPage;
+  const endIndex = Math.min(startIndex + ufmItemsPerPage, filteredItems.length);
+  const currentItems = filteredItems.slice(startIndex, endIndex);
+
+  const canEdit = currentRole !== "quanly";
+  const colSpanCount = 9;
+
+  if (filteredItems.length === 0) {
+    ufmDetailTableBody.innerHTML = `
+      <tr>
+        <td colspan="${colSpanCount}" class="px-4 py-8 text-center text-slate-400">
+          Không tìm thấy công văn UFM nào phù hợp với bộ lọc.
+        </td>
+      </tr>
+    `;
+    if (ufmPaginationInfo) ufmPaginationInfo.textContent = "Hiển thị 0 - 0 trong tổng số 0 bản ghi";
+    if (ufmPaginationControls) ufmPaginationControls.innerHTML = "";
+    return;
+  }
+
+  ufmDetailTableBody.innerHTML = currentItems.map((item, index) => {
+    const driveUrl = item.drive_link || item.link_google_drive || "";
+    const hasDriveLink = driveUrl && driveUrl.trim() !== "";
+    const thoiGianDisplay = item.ngay_den || item.created_at || item.ngay_ban_hanh || item.ngay_nhan;
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-xs">
+        <td class="px-3 py-2.5 font-medium text-slate-500 text-center">${startIndex + index + 1}</td>
+        <td class="px-3 py-2.5 whitespace-nowrap text-slate-600">
+          ${formatDateToVN(thoiGianDisplay) || '--'}
+        </td>
+        <td class="px-3 py-2.5 font-semibold text-slate-900 break-words">
+          ${escapeHtml(item.so_ky_hieu)}
+        </td>
+        <td class="px-3 py-2.5 text-slate-700 font-medium">${escapeHtml(item.loai_van_ban)}</td>
+        <td class="px-3 py-2.5 text-slate-700 break-words">
+          ${renderDonViBanHanh(item)}
+        </td>
+        <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">${formatDateToVN(item.ngay_ban_hanh)}</td>
+        <td class="px-3 py-2.5 text-slate-800 leading-relaxed">
+          <div class="line-clamp-3 font-normal" title="${escapeHtml(item.trich_yeu)}">
+            ${escapeHtml(item.trich_yeu)}
+          </div>
+        </td>
+        <td class="px-3 py-2.5 text-center whitespace-nowrap">
+          ${hasDriveLink ? `
+            <a href="${escapeHtml(driveUrl)}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded text-[11px] font-medium transition">
+              <i class="fa-brands fa-google-drive text-emerald-600 mr-1 text-xs"></i>
+              Xem
+            </a>
+          ` : `
+            <span class="text-slate-300 italic">Không</span>
+          `}
+        </td>
+        <td class="px-3 py-2.5 text-center whitespace-nowrap">
+          ${canEdit ? `
+            <div class="flex items-center justify-center space-x-2">
+              <button onclick="editDispatch('${item.id}')" class="text-amber-600 hover:text-amber-700 hover:underline text-[11px] font-medium inline-flex items-center">
+                <i class="fa-solid fa-pen-to-square mr-1"></i> Sửa
+              </button>
+              <span class="text-slate-300">|</span>
+              <button onclick="deleteDispatch('${item.id}')" class="text-rose-600 hover:text-rose-700 hover:underline text-[11px] font-medium inline-flex items-center">
+                <i class="fa-solid fa-trash-can mr-1"></i> Xóa
+              </button>
+            </div>
+          ` : `
+            <span class="text-slate-300 text-[11px] italic">--</span>
+          `}
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  if (ufmPaginationInfo) {
+    ufmPaginationInfo.textContent = `Hiển thị ${startIndex + 1} - ${endIndex} trong tổng số ${filteredItems.length} bản ghi`;
+  }
+
+  renderUfmPaginationControls(totalPages);
+}
+
+function renderUfmPaginationControls(totalPages) {
+  if (!ufmPaginationControls) return;
+  let html = "";
+
+  const prevDisabled = ufmCurrentPage === 1 ? "pagination-btn-disabled" : "";
+  html += `
+    <button onclick="goToUfmPage(${ufmCurrentPage - 1})" class="pagination-btn pagination-btn-default ${prevDisabled}" title="Trang trước">
+      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+    </button>
+  `;
+
+  for (let page = 1; page <= totalPages; page++) {
+    if (page === 1 || page === totalPages || (page >= ufmCurrentPage - 1 && page <= ufmCurrentPage + 1)) {
+      const activeClass = page === ufmCurrentPage ? "pagination-btn-active" : "pagination-btn-default";
+      html += `
+        <button onclick="goToUfmPage(${page})" class="pagination-btn ${activeClass}">
+          ${page}
+        </button>
+      `;
+    } else if (page === ufmCurrentPage - 2 || page === ufmCurrentPage + 2) {
+      html += `<span class="px-1 text-slate-400">...</span>`;
+    }
+  }
+
+  const nextDisabled = ufmCurrentPage === totalPages ? "pagination-btn-disabled" : "";
+  html += `
+    <button onclick="goToUfmPage(${ufmCurrentPage + 1})" class="pagination-btn pagination-btn-default ${nextDisabled}" title="Trang sau">
+      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+    </button>
+  `;
+
+  ufmPaginationControls.innerHTML = html;
+}
+
+window.goToUfmPage = function(page) {
+  ufmCurrentPage = page;
+  renderUfmDetailTable();
+};
+
+if (btnUfmFilter) btnUfmFilter.addEventListener("click", runUfmFilter);
+if (btnUfmReset) {
+  btnUfmReset.addEventListener("click", () => {
+    if (ufmFilterFromDate) ufmFilterFromDate.value = "";
+    if (ufmFilterToDate) ufmFilterToDate.value = "";
+    if (ufmFilterDonVi) ufmFilterDonVi.value = "Tất cả các đơn vị";
+    runUfmFilter();
+    showNotification("Đã xóa bộ lọc công văn UFM", "info");
+  });
+}
 
 // Render Table Header according to role
 function updateTableHeaders() {
