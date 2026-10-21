@@ -630,8 +630,6 @@ function updateDynamicUnitField() {
       }
       unitInputText.setAttribute("required", "true");
     }
-  } else {
-    if (donViUfmContainer) donViUfmContainer.classList.add("hidden");
 
     // Hide response section for incoming documents
     if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.add("hidden");
@@ -639,6 +637,7 @@ function updateDynamicUnitField() {
     if (hasResponseDocInput) hasResponseDocInput.checked = false;
     toggleResponseDocFields(false);
   } else {
+    if (donViUfmContainer) donViUfmContainer.classList.add("hidden");
     if (nguonCongVanContainer) nguonCongVanContainer.classList.add("hidden");
     unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
     unitTextContainer.classList.add("hidden");
