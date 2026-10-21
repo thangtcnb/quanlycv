@@ -458,45 +458,47 @@ function applyRolePermissions() {
   renderDispatchList();
 }
 
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = loginUsernameInput.value.trim();
-  const password = loginPasswordInput.value.trim();
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const username = loginUsernameInput ? loginUsernameInput.value.trim() : "";
+    const password = loginPasswordInput ? loginPasswordInput.value.trim() : "";
 
-  if (!username || !password) {
-    loginErrorText.textContent = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!";
-    loginErrorMsg.classList.remove("hidden");
-    return;
-  }
-
-  // Ensure initial default users are seeded on Firebase RTDB if empty
-  await ensureInitialUsersSeeded();
-
-  try {
-    const userSnap = await get(ref(database, `users/${username}`));
-    if (userSnap.exists()) {
-      const userData = userSnap.val();
-      if (userData && userData.password === password) {
-        loginErrorMsg.classList.add("hidden");
-        const role = userData.role || "vanthu";
-        sessionStorage.setItem("qlcv_user", username);
-        sessionStorage.setItem("qlcv_role", role);
-        localStorage.setItem("qlcv_user", username);
-        localStorage.setItem("qlcv_role", role);
-        showNotification(`Đăng nhập thành công! Chào mừng ${username}`);
-        await checkAuthStatus();
-        return;
-      }
+    if (!username || !password) {
+      if (loginErrorText) loginErrorText.textContent = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!";
+      if (loginErrorMsg) loginErrorMsg.classList.remove("hidden");
+      return;
     }
 
-    loginErrorText.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác!";
-    loginErrorMsg.classList.remove("hidden");
-  } catch (error) {
-    console.error("Login error:", error);
-    loginErrorText.textContent = "Lỗi khi kết nối hệ thống. Vui lòng thử lại!";
-    loginErrorMsg.classList.remove("hidden");
-  }
-});
+    // Ensure initial default users are seeded on Firebase RTDB if empty
+    await ensureInitialUsersSeeded();
+
+    try {
+      const userSnap = await get(ref(database, `users/${username}`));
+      if (userSnap.exists()) {
+        const userData = userSnap.val();
+        if (userData && userData.password === password) {
+          if (loginErrorMsg) loginErrorMsg.classList.add("hidden");
+          const role = userData.role || "vanthu";
+          sessionStorage.setItem("qlcv_user", username);
+          sessionStorage.setItem("qlcv_role", role);
+          localStorage.setItem("qlcv_user", username);
+          localStorage.setItem("qlcv_role", role);
+          showNotification(`Đăng nhập thành công! Chào mừng ${username}`);
+          await checkAuthStatus();
+          return;
+        }
+      }
+
+      if (loginErrorText) loginErrorText.textContent = "Tên đăng nhập hoặc mật khẩu không chính xác!";
+      if (loginErrorMsg) loginErrorMsg.classList.remove("hidden");
+    } catch (error) {
+      console.error("Login error:", error);
+      if (loginErrorText) loginErrorText.textContent = "Lỗi khi kết nối hệ thống. Vui lòng thử lại!";
+      if (loginErrorMsg) loginErrorMsg.classList.remove("hidden");
+    }
+  });
+}
 
 function logoutUser() {
   sessionStorage.removeItem("qlcv_user");
@@ -630,8 +632,6 @@ function updateDynamicUnitField() {
       }
       unitInputText.setAttribute("required", "true");
     }
-  } else {
-    if (donViUfmContainer) donViUfmContainer.classList.add("hidden");
 
     // Hide response section for incoming documents
     if (hasResponseCheckboxContainer) hasResponseCheckboxContainer.classList.add("hidden");
@@ -639,6 +639,7 @@ function updateDynamicUnitField() {
     if (hasResponseDocInput) hasResponseDocInput.checked = false;
     toggleResponseDocFields(false);
   } else {
+    if (donViUfmContainer) donViUfmContainer.classList.add("hidden");
     if (nguonCongVanContainer) nguonCongVanContainer.classList.add("hidden");
     unitLabel.innerHTML = `Phòng ban ban hành <span class="text-rose-500">*</span>`;
     unitTextContainer.classList.add("hidden");
