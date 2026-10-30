@@ -81,6 +81,7 @@ const headerBtnExportJSON = document.getElementById("headerBtnExportJSON");
 const excelFileInput = document.getElementById("excelFileInput");
 const btnImportExcel = document.getElementById("btnImportExcel");
 const headerBtnImportExcel = document.getElementById("headerBtnImportExcel");
+const btnXuatExcelVanthu = document.getElementById("btnXuatExcelVanthu");
 
 // DOM Elements - Form
 const form = document.getElementById("dispatchForm");
@@ -421,6 +422,7 @@ function applyRolePermissions() {
     // Hide Backup elements
     if (headerBackupContainer) headerBackupContainer.classList.add("hidden");
     if (backupSection) backupSection.classList.add("hidden");
+    if (btnXuatExcelVanthu) btnXuatExcelVanthu.classList.add("hidden");
     // Hide Batch Action Toolbars
     if (batchActionToolbar) batchActionToolbar.classList.add("hidden");
     if (statBatchActionToolbar) statBatchActionToolbar.classList.add("hidden");
@@ -436,6 +438,7 @@ function applyRolePermissions() {
     // Show Backup elements for quantri
     if (headerBackupContainer) headerBackupContainer.classList.remove("hidden");
     if (backupSection) backupSection.classList.remove("hidden");
+    if (btnXuatExcelVanthu) btnXuatExcelVanthu.classList.remove("hidden");
     // Show Batch Action Toolbars for quantri
     if (batchActionToolbar) batchActionToolbar.classList.remove("hidden");
     if (statBatchActionToolbar) statBatchActionToolbar.classList.remove("hidden");
@@ -447,9 +450,10 @@ function applyRolePermissions() {
       tableColumnContainer.classList.add("lg:col-span-8");
     }
     if (tabUsersBtn) tabUsersBtn.classList.add("hidden");
-    // Hide Backup elements
+    // Hide Backup elements except Vanthu Excel Export
     if (headerBackupContainer) headerBackupContainer.classList.add("hidden");
     if (backupSection) backupSection.classList.add("hidden");
+    if (btnXuatExcelVanthu) btnXuatExcelVanthu.classList.remove("hidden");
     // Hide Batch Action Toolbars
     if (batchActionToolbar) batchActionToolbar.classList.add("hidden");
     if (statBatchActionToolbar) statBatchActionToolbar.classList.add("hidden");
@@ -2067,10 +2071,10 @@ if (btnStatReset) {
 }
 
 // -------------------------------------------------------------
-// 5. BACKUP & EXPORT DATA LOGIC (quantri ONLY)
+// 5. BACKUP & EXPORT DATA LOGIC (quantri & vanthu)
 // -------------------------------------------------------------
 function exportToExcel() {
-  if (currentRole !== "quantri") {
+  if (currentRole !== "quantri" && currentRole !== "vanthu") {
     showNotification("Bạn không có quyền thực hiện chức năng này!", "error");
     return;
   }
@@ -2499,6 +2503,7 @@ if (btnExportExcel) btnExportExcel.addEventListener("click", exportToExcel);
 if (btnExportJSON) btnExportJSON.addEventListener("click", exportToJSON);
 if (headerBtnExportExcel) headerBtnExportExcel.addEventListener("click", exportToExcel);
 if (headerBtnExportJSON) headerBtnExportJSON.addEventListener("click", exportToJSON);
+if (btnXuatExcelVanthu) btnXuatExcelVanthu.addEventListener("click", exportToExcel);
 
 // -------------------------------------------------------------
 // AUTO REFRESH (MỖI 5 PHÚT / 300.000 ms)
