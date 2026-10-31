@@ -2111,9 +2111,10 @@ function exportToExcel() {
       }
 
       const linkDrive = item.link_google_drive || item.drive_link || "";
+      const thoiGianDisplay = item.ngay_den || item.created_at || item.ngay_ban_hanh || item.ngay_nhan;
 
       return {
-        "Thời gian CV đến": isDen ? formatDateToVN(item.ngay_den) : "",
+        "Thời gian CV đến": formatDateToVN(thoiGianDisplay),
         "Số / Ký hiệu": item.so_ky_hieu || "",
         "Phân loại": displayLoai,
         "Loại văn bản": item.loai_van_ban || "",
