@@ -1,0 +1,41 @@
+name: Tự động Sao lưu Excel Hàng ngày
+
+on:
+  schedule:
+    # 01:00 AM giờ Việt Nam (UTC+7) = 18:00 UTC hôm trước
+    - cron: '0 18 * * *'
+  workflow_dispatch: # Cho phép bấm chạy kiểm tra thủ công bất kỳ lúc nào
+
+permissions:
+  contents: write
+
+jobs:
+  daily-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cài đặt thư viện XLSX
+        run: npm install xlsx
+
+      - name: Xuất dữ liệu Firebase sang file Excel
+        run: node scripts/backup-excel.js
+
+      - name: Lưu và đẩy file Excel vào kho lưu trữ GitHub
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          if git diff --staged --quiet; then
+            echo "Không có thay đổi mới để commit."
+          else
+            TODAY=$(TZ='Asia/Ho_Chi_Minh' date +'%Y-%m-%d')
+            git commit -m "Tự động sao lưu dữ liệu công văn: ${TODAY}"
+            git push origin main
+          fi
